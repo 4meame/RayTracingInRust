@@ -12,9 +12,23 @@ use hit::{Hit, World};
 use sphere::Sphere;
 use camera::Camera;
 
-fn ray_color(ray: &Ray, world: &World) -> Color {
-    if let Some(rec) = world.hit(ray, 0.0, f64::INFINITY) {
-        0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0))
+fn ray_color(ray: &Ray, world: &World, depth: u64) -> Color {
+    if depth <= 0 {
+        // if we've exceeded the ray bounce limit, no more light is gathered
+        return Color::new(0.0, 0.0, 0.0)
+    }
+
+    // 0.001 t_min fixs shadow acne
+    if let Some(rec) = world.hit(ray, 0.00001, f64::INFINITY) {
+        // 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0))
+
+        // Lambertian:
+        // let target = rec.position + rec.normal + Vec3::random_in_unit_sphere().normalized();
+        
+        // Hemispherical scattering:
+        let target = rec.position + Vec3::random_in_hemisphere(rec.normal);
+        let r = Ray::new(rec.position, target - rec.position);
+        0.5 * ray_color(&r, world, depth - 1)
     } else {
     let unit_direction = ray.direction().normalized();
     let t = 0.5 * (unit_direction.y() + 1.0);
@@ -29,6 +43,7 @@ fn main() {
     const IMAGE_WIDTH: u64 = 512;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
     const SAMPLES_PER_PIXEL: u64 = 100;
+    const MAX_DEPTH: u64 = 5;
 
     // world
     let mut world = World::new();
@@ -87,7 +102,7 @@ fn main() {
                 let v = ((j as f64) + random_v) / ((IMAGE_HEIGHT - 1) as f64);
                 
                 let r = camera.get_ray(u, v);
-                pixel_color += ray_color(&r, &world);
+                pixel_color += ray_color(&r, &world, MAX_DEPTH);
             }
 
             println!("{}", pixel_color.format_color(SAMPLES_PER_PIXEL));
