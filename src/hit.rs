@@ -1,11 +1,15 @@
+use std::rc::Rc;
 use super::vec::{Vec3, Point3};
 use super::ray::Ray;
+use super::mat::Material;
 
 pub struct HitRecord {
     pub position: Point3,
     pub normal: Vec3,
     pub t: f64,
-    pub front_face: bool
+    pub front_face: bool,
+    // explaination: the reference counted smart pointer, Rc<T> type keeps track of the number of references to a value to determine whether or not the value is still in use
+    pub material: Rc<dyn Material>
 }
 
 pub trait Hit {
@@ -23,7 +27,7 @@ impl HitRecord {
     }
 }
 
-// explaination: pointer type of trait object
+// explaination: smart pointer type of trait object, Box<T> pointer allow to store data on the heap, what remains on the stack is the pointer to the heap data
 pub type World = Vec<Box<dyn Hit>>;
 
 impl Hit for World {

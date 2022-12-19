@@ -3,14 +3,16 @@ mod ray;
 mod hit;
 mod sphere;
 mod camera;
+mod mat;
 
-use std::io::{stderr, Write};
+use std::{io::{stderr, Write}, rc::Rc};
 use rand::Rng;
-use vec::{Vec3, Point3, Color};
+use vec::{Point3, Color};
 use ray::Ray;
 use hit::{Hit, World};
 use sphere::Sphere;
 use camera::Camera;
+use mat::{Lambertian, Metal};
 
 fn ray_color(ray: &Ray, world: &World, depth: u64) -> Color {
     if depth <= 0 {
@@ -26,9 +28,17 @@ fn ray_color(ray: &Ray, world: &World, depth: u64) -> Color {
         // let target = rec.position + rec.normal + Vec3::random_in_unit_sphere().normalized();
         
         // Hemispherical scattering:
-        let target = rec.position + Vec3::random_in_hemisphere(rec.normal);
-        let r = Ray::new(rec.position, target - rec.position);
-        0.5 * ray_color(&r, world, depth - 1)
+        // let target = rec.position + Vec3::random_in_hemisphere(rec.normal);
+
+        // let r = Ray::new(rec.position, target - rec.position);
+        // 0.5 * ray_color(&r, world, depth - 1)
+
+        if let Some((attenuation, scattered)) = rec.material.scatter(ray, &rec) {
+            attenuation * ray_color(&scattered, world, depth - 1)
+        } else {
+            Color::new(0.0, 0.0, 0.0)
+        }
+
     } else {
     let unit_direction = ray.direction().normalized();
     let t = 0.5 * (unit_direction.y() + 1.0);
@@ -47,8 +57,20 @@ fn main() {
 
     // world
     let mut world = World::new();
-    world.push(Box::new(Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5)));
-    world.push(Box::new(Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0)));
+    let mat_ground = Rc::new(Lambertian::new(Color::new(1.0, 0.4, 0.6)));
+    let mat_center = Rc::new(Lambertian::new(Color::new(0.5, 0.8, 0.1)));
+    let mat_left = Rc::new(Metal::new(Color::new(1.0, 1.0, 1.0), 0.3));
+    let mat_right = Rc::new(Metal::new(Color::new(0.2, 0.8, 0.7), 0.9));
+
+    let sphere_ground = Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0, mat_ground);
+    let sphere_center = Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5, mat_center);
+    let sphere_left = Sphere::new(Point3::new(-1.0, 0.0, -1.0), 0.5, mat_left);
+    let sphere_right = Sphere::new(Point3::new(1.0, 0.0, -1.0), 0.5, mat_right);
+
+    world.push(Box::new(sphere_ground));
+    world.push(Box::new(sphere_center));
+    world.push(Box::new(sphere_left));
+    world.push(Box::new(sphere_right));
 
     // camera
     let camera = Camera::new();
