@@ -76,7 +76,12 @@ fn main() {
     world.push(Box::new(sphere_right));
 
     // camera
-    let camera = Camera::new(Point3::new(-2.0, 2.0, 1.0), Point3::new(0.0, 0.0, -1.0), Vec3::new(0.0, 1.0, 0.0), 20.0, ASPECT_RATIO);
+    let lookfrom = Point3::new(3.0, 3.0, 2.0);
+    let lookat = Point3::new(0.0, 0.0, -1.0);
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let aperture = 2.0;
+    let dist_to_focus = (lookfrom - lookat).length();
+    let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus);
     // let viewport_height = 2.0;
     // let viewport_width = viewport_height * ASPECT_RATIO;
     // let focal_length = 1.0;

@@ -68,7 +68,7 @@ impl Vec3 {
         loop {
             let v = Vec3::random(-1.0..1.0);
             if v.length() < 1.0 {
-                return v;
+                return v
             }
         }
     }
@@ -79,6 +79,17 @@ impl Vec3 {
             in_unit_sphere
         } else {
             (-1.0) * in_unit_sphere
+        }
+    }
+
+    pub fn random_in_unit_disk() -> Vec3 {
+        let mut rng = rand::thread_rng();
+
+        loop {
+            let p = Vec3::new(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0), 0.0);
+            if p.length() < 1.0 {
+                return p
+            }
         }
     }
 
