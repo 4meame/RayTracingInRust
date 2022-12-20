@@ -7,14 +7,12 @@ mod mat;
 
 use std::{io::{stderr, Write}, rc::Rc};
 use rand::Rng;
-use vec::{Point3, Color};
+use vec::{Vec3, Point3, Color};
 use ray::Ray;
 use hit::{Hit, World};
 use sphere::Sphere;
 use camera::Camera;
-use mat::{Lambertian, Metal};
-
-use crate::mat::Dielectric;
+use mat::{Lambertian, Metal, Dielectric};
 
 fn ray_color(ray: &Ray, world: &World, depth: u64) -> Color {
     if depth <= 0 {
@@ -78,7 +76,7 @@ fn main() {
     world.push(Box::new(sphere_right));
 
     // camera
-    let camera = Camera::new();
+    let camera = Camera::new(Point3::new(-2.0, 2.0, 1.0), Point3::new(0.0, 0.0, -1.0), Vec3::new(0.0, 1.0, 0.0), 20.0, ASPECT_RATIO);
     // let viewport_height = 2.0;
     // let viewport_width = viewport_height * ASPECT_RATIO;
     // let focal_length = 1.0;
