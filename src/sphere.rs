@@ -1,17 +1,16 @@
-use std::rc::Rc;
 use super::vec::{Vec3, Point3};
 use super::ray::Ray;
 use super::hit::{Hit, HitRecord};
 use super::mat::Material;
 
-pub struct Sphere {
+pub struct Sphere<M: Material> {
     center: Point3,
     radius: f64,
-    material: Rc<dyn Material>
+    material: M
 }
 
-impl Sphere {
-    pub fn new(center: Point3, radius: f64, material: Rc<dyn Material>) ->Sphere {
+impl<M: Material> Sphere<M> {
+    pub fn new(center: Point3, radius: f64, material: M) -> Self {
         Sphere {
             center,
             radius,
@@ -20,7 +19,7 @@ impl Sphere {
     }
 }
 
-impl Hit for Sphere {
+impl<M: Material> Hit for Sphere<M> {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let oc = r.origin() - self.center;
         let a = r.direction().length().powi(2);
@@ -47,7 +46,7 @@ impl Hit for Sphere {
             normal: Vec3::new(0.0, 0.0, 0.0),
             t: root,
             front_face: false,
-            material: self.material.clone()
+            material: &self.material
         };
 
         let outward_normal = (rec.position - self.center) / self.radius;

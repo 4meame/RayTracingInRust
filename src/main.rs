@@ -5,8 +5,9 @@ mod sphere;
 mod camera;
 mod mat;
 
-use std::{io::{stderr, Write}, rc::Rc};
+use std::{io::{stderr, Write}};
 use rand::Rng;
+use rayon::prelude::*;
 use vec::{Vec3, Point3, Color};
 use ray::Ray;
 use hit::{Hit, World};
@@ -51,7 +52,7 @@ fn random_scene() -> World {
     let mut rng = rand::thread_rng();
     let mut world = World::new();
 
-    let ground_mat = Rc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
+    let ground_mat = Lambertian::new(Color::new(0.5, 0.5, 0.5));
     let ground_sphere = Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground_mat);
 
     world.push(Box::new(ground_sphere));
@@ -66,7 +67,7 @@ fn random_scene() -> World {
             if choose_mat < 0.8 {
                 // Diffuse
                 let albedo = Color::random(0.0..1.0) * Color::random(0.0..1.0);
-                let sphere_mat = Rc::new(Lambertian::new(albedo));
+                let sphere_mat = Lambertian::new(albedo);
                 let sphere = Sphere::new(center, 0.2, sphere_mat);
 
                 world.push(Box::new(sphere));
@@ -74,13 +75,13 @@ fn random_scene() -> World {
                 // Metal
                 let albedo = Color::random(0.4..1.0);
                 let fuzz = rng.gen_range(0.0..0.5);
-                let sphere_mat = Rc::new(Metal::new(albedo, fuzz));
+                let sphere_mat = Metal::new(albedo, fuzz);
                 let sphere = Sphere::new(center, 0.2, sphere_mat);
 
                 world.push(Box::new(sphere));
             } else {
                 // Glass
-                let sphere_mat = Rc::new(Dielectric::new(1.5));
+                let sphere_mat = Dielectric::new(1.5);
                 let sphere = Sphere::new(center, 0.2, sphere_mat);
 
                 world.push(Box::new(sphere));
@@ -88,9 +89,9 @@ fn random_scene() -> World {
         }
     }
 
-    let mat1 = Rc::new(Dielectric::new(1.5));
-    let mat2 = Rc::new(Lambertian::new(Color::new(0.4, 0.2, 0.1)));
-    let mat3 = Rc::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0));
+    let mat1 = Dielectric::new(1.5);
+    let mat2 = Lambertian::new(Color::new(0.4, 0.2, 0.1));
+    let mat3 = Metal::new(Color::new(0.7, 0.6, 0.5), 0.0);
 
     let sphere1 = Sphere::new(Point3::new(0.0, 1.0, 0.0), 1.0, mat1);
     let sphere2 = Sphere::new(Point3::new(-4.0, 1.0, 0.0), 1.0, mat2);
@@ -106,10 +107,10 @@ fn random_scene() -> World {
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 3.0 / 2.0;
-    const IMAGE_WIDTH: u64 = 300;
+    const IMAGE_WIDTH: u64 = 900;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 150;
-    const MAX_DEPTH: u64 = 15;
+    const SAMPLES_PER_PIXEL: u64 = 300;
+    const MAX_DEPTH: u64 = 30;
 
     // world
     // let mut world = World::new();
@@ -153,7 +154,7 @@ fn main() {
     println!("{} {}",IMAGE_WIDTH, IMAGE_HEIGHT);
     println!("255");
 
-    let mut rng = rand::thread_rng();
+    //let mut rng = rand::thread_rng();
     for j in (0..IMAGE_HEIGHT).rev() {
         //adding a progress indicator
         eprint!("\rScanlines remaining: {:3}", IMAGE_HEIGHT - j - 1);
@@ -181,18 +182,32 @@ fn main() {
             // let r = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical - origin);
             // let pixel_color = ray_color(&r, &world);
 
-            let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-            for _ in 0..SAMPLES_PER_PIXEL {
+            // let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+            // for _ in 0..SAMPLES_PER_PIXEL {
+            //     let random_u = rng.gen::<f64>();
+            //     let random_v = rng.gen::<f64>();
+
+            //     let u = ((i as f64) + random_u) / ((IMAGE_WIDTH - 1) as f64);
+            //     let v = ((j as f64) + random_v) / ((IMAGE_HEIGHT - 1) as f64);
+                
+            //     let r = camera.get_ray(u, v);
+            //     pixel_color += ray_color(&r, &world, MAX_DEPTH);
+            // }          
+
+            let pixel_color: Color = (0..SAMPLES_PER_PIXEL).into_par_iter().map(|_sample| {
+                
+                let mut rng = rand::thread_rng();
                 let random_u = rng.gen::<f64>();
                 let random_v = rng.gen::<f64>();
 
                 let u = ((i as f64) + random_u) / ((IMAGE_WIDTH - 1) as f64);
                 let v = ((j as f64) + random_v) / ((IMAGE_HEIGHT - 1) as f64);
-                
-                let r = camera.get_ray(u, v);
-                pixel_color += ray_color(&r, &world, MAX_DEPTH);
-            }
 
+                let r = camera.get_ray(u, v);
+                ray_color(&r, &world, MAX_DEPTH)
+            })
+            .sum();
+            
             println!("{}", pixel_color.format_color(SAMPLES_PER_PIXEL));
         }
     }

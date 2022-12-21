@@ -5,7 +5,7 @@ use rand::Rng;
 
 // variables
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub struct Vec3 {
     e: [f64; 3]
 }
@@ -225,6 +225,16 @@ impl DivAssign<f64> for Vec3 {
         *self = Vec3 {
             e: [self[0] / other, self[1] / other, self[2] / other]
         };
+    }
+}
+
+/// allow accumulation of vectors from an iterator.
+impl std::iter::Sum for Vec3 {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(Vec3::default(), std::ops::Add::add)
     }
 }
 
