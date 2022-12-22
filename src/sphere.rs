@@ -2,6 +2,8 @@ use super::vec::{Vec3, Point3};
 use super::ray::Ray;
 use super::hit::{Hit, HitRecord};
 use super::mat::Material;
+use super::aabb;
+use super::aabb::AABB;
 
 pub struct Sphere<M: Material> {
     center: Point3,
@@ -54,6 +56,14 @@ impl<M: Material> Hit for Sphere<M> {
 
         Some(rec)
     }
+
+    fn bounding_box(&self, _t0: f64, _t1: f64) -> Option<AABB> {
+        let min = self.center - Vec3::new(self.radius, self.radius, self.radius);
+        let max = self.center + Vec3::new(self.radius, self.radius, self.radius);
+
+        Some(AABB{min, max})
+    }
+
 }
 
 pub struct MovingSphere<M: Material> {
@@ -116,5 +126,16 @@ impl<M: Material> Hit for MovingSphere<M> {
         rec.set_face_normal(r, outward_normal);
 
         Some(rec)
+    }
+
+    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+        let radius = Vec3::new(self.radius, self.radius, self. radius);
+        let min0 = self.center(t0) - radius;
+        let max0 = self.center(t0) + radius;
+        let min1 = self.center(t1) - radius;
+        let max1 = self.center(t0) + radius;
+        let aabb0 = AABB::new(min0, max0);
+        let aabb1 = AABB::new(min1, max1);
+        Some(aabb::surrounding_box(&aabb0, &aabb1))
     }
 }
