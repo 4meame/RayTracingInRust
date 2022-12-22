@@ -71,8 +71,8 @@ fn random_scene() -> Box<dyn Hit> {
                 // Diffuse
                 let albedo = Color::random(0.0..1.0) * Color::random(0.0..1.0);
                 let sphere_mat = Lambertian::new(albedo);
-                // let center1 = center + Vec3::new(0.0, rng.gen_range(0.0..0.5), 0.0);
-                let sphere = Sphere::new(center, 0.2 ,sphere_mat);
+                let center1 = center + Vec3::new(0.0, rng.gen_range(0.0..0.5), 0.0);
+                let sphere = MovingSphere::new(center, center1, 0.0, 1.0, 0.2 ,sphere_mat);
 
                 world.push(Box::new(sphere));
             } else if choose_mat < 0.95 {
@@ -111,7 +111,7 @@ fn random_scene() -> Box<dyn Hit> {
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 3.0 / 2.0;
-    const IMAGE_WIDTH: u64 = 1500;
+    const IMAGE_WIDTH: u64 = 600;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
     const SAMPLES_PER_PIXEL: u64 = 600;
     const MAX_DEPTH: u64 = 50;

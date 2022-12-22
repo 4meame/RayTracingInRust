@@ -1,3 +1,4 @@
+use std::f64;
 use super::vec::Vec3;
 use super::ray::Ray;
 
@@ -38,18 +39,13 @@ impl AABB {
 /// merge 2 AABB into 1
 pub fn surrounding_box(box0: &AABB, box1: &AABB) -> AABB {
     let min = Vec3::new(
-        box0.min.x().min(box1.min.x()),
-        box0.min.y().min(box1.min.y()),
-        box0.min.z().min(box1.min.z())
-    );
+        f64::min(box0.min.x(), box1.min.x()),
+        f64::min(box0.min.y(), box1.min.y()),
+        f64::min(box0.min.z(), box1.min.z()));
     let max = Vec3::new(
-        box0.max.x().max(box1.max.x()),
-        box0.max.y().max(box1.max.y()),
-        box0.max.z().max(box1.max.z())
-    );
+        f64::max(box0.max.x(), box1.max.x()),
+        f64::max(box0.max.y(), box1.max.y()),
+        f64::max(box0.max.z(), box1.max.z()));
 
-    AABB { 
-        min,
-        max
-    }
+    AABB { min, max }
 }

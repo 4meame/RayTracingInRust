@@ -128,14 +128,15 @@ impl<M: Material> Hit for MovingSphere<M> {
         Some(rec)
     }
 
-    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
-        let radius = Vec3::new(self.radius, self.radius, self. radius);
-        let min0 = self.center(t0) - radius;
-        let max0 = self.center(t0) + radius;
-        let min1 = self.center(t1) - radius;
-        let max1 = self.center(t0) + radius;
-        let aabb0 = AABB::new(min0, max0);
-        let aabb1 = AABB::new(min1, max1);
-        Some(aabb::surrounding_box(&aabb0, &aabb1))
+    fn bounding_box(&self, _t0: f64, _t1: f64) -> Option<AABB> {
+        let min0 = self.center0 - Vec3::new(self.radius, self.radius, self.radius);
+        let max0 = self.center0 + Vec3::new(self.radius, self.radius, self.radius);
+        let min1 = self.center1 - Vec3::new(self.radius, self.radius, self.radius);
+        let max1 = self.center1 + Vec3::new(self.radius, self.radius, self.radius);
+
+        let box0 = AABB::new(min0, max0);
+        let box1 = AABB::new(min1, max1);
+
+        Some(aabb::surrounding_box(&box0, &box1))
     }
 }
