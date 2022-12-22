@@ -11,7 +11,7 @@ use rayon::prelude::*;
 use vec::{Vec3, Point3, Color};
 use ray::Ray;
 use hit::{Hit, World};
-use sphere::Sphere;
+use sphere::{Sphere, MovingSphere};
 use camera::Camera;
 use mat::{Lambertian, Metal, Dielectric};
 
@@ -68,7 +68,8 @@ fn random_scene() -> World {
                 // Diffuse
                 let albedo = Color::random(0.0..1.0) * Color::random(0.0..1.0);
                 let sphere_mat = Lambertian::new(albedo);
-                let sphere = Sphere::new(center, 0.2, sphere_mat);
+                let center1 = center + Vec3::new(rng.gen_range(-0.1..0.1), rng.gen_range(0.0..0.5), 0.0);
+                let sphere = MovingSphere::new(center, center1, 0.0, 1.0, 0.2 ,sphere_mat);
 
                 world.push(Box::new(sphere));
             } else if choose_mat < 0.95 {
@@ -140,7 +141,7 @@ fn main() {
     let vup = Vec3::new(0.0, 1.0, 0.0);
     let dist_to_focus = 10.0;
     let aperture = 0.1;
-    let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus);
+    let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.2, 0.6);
     // let viewport_height = 2.0;
     // let viewport_width = viewport_height * ASPECT_RATIO;
     // let focal_length = 1.0;

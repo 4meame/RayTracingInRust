@@ -1,3 +1,4 @@
+use rand::Rng;
 use std::f64;
 use super::vec::{Vec3, Point3};
 use super::ray::Ray;
@@ -9,11 +10,13 @@ pub struct Camera {
     vertical: Vec3,
     cu: Vec3,
     cv: Vec3,
-    lens_radius: f64
+    lens_radius: f64,
+    time0: f64,
+    time1: f64
 }
 
 impl Camera {
-    pub fn new(lookfrom: Point3, lookat: Point3, vup: Vec3, vfov: f64, aspect_ratio: f64, aperture: f64, focus_dist: f64) -> Camera {
+    pub fn new(lookfrom: Point3, lookat: Point3, vup: Vec3, vfov: f64, aspect_ratio: f64, aperture: f64, focus_dist: f64, time0: f64, time1: f64) -> Camera {
         // const ASPECT_RATIO: f64 = 16.0 / 9.0;
         // const VIEWPORT_HEIGHT: f64 = 2.0;
         // const VIEWPORT_WIDTH: f64 = ASPECT_RATIO * VIEWPORT_HEIGHT;
@@ -39,7 +42,9 @@ impl Camera {
             lower_left_corner: llc,
             cu,
             cv,
-            lens_radius: aperture / 2.0 
+            lens_radius: aperture / 2.0,
+            time0,
+            time1
         }
     }
 
@@ -47,6 +52,9 @@ impl Camera {
         let rd = self.lens_radius * Vec3::random_in_unit_disk();
         let offset = self.cu * rd.x() + self.cv * rd.y();
 
-        Ray::new(self.origin + offset, self.lower_left_corner + s * self.horizontal + t * self.vertical - (self.origin + offset))
+        //track time between the time of strat and end
+        let time = self.time0 + rand::thread_rng().gen::<f64>() * (self.time1 - self.time0);
+
+        Ray::new(self.origin + offset, self.lower_left_corner + s * self.horizontal + t * self.vertical - (self.origin + offset), time)
     }
 }
