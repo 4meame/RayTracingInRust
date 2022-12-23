@@ -1,9 +1,20 @@
+use std::f64::consts::PI;
 use super::vec::{Vec3, Point3};
 use super::ray::Ray;
 use super::hit::{Hit, HitRecord};
 use super::mat::Material;
 use super::aabb;
 use super::aabb::AABB;
+
+fn get_sphere_uv(p: &Vec3) -> (f64, f64) {
+    let phi = p.z().atan2(p.x()) + PI;
+    let theta = p.y().acos();
+
+    let u = phi / (2.0 * PI);
+    let v = theta / PI;
+
+    (u, v)
+}
 
 pub struct Sphere<M: Material> {
     center: Point3,
@@ -47,12 +58,18 @@ impl<M: Material> Hit for Sphere<M> {
             position: p,
             normal: Vec3::new(0.0, 0.0, 0.0),
             t: root,
+            u: 0.0,
+            v: 0.0,
             front_face: false,
             material: &self.material
         };
 
         let outward_normal = (rec.position - self.center) / self.radius;
         rec.set_face_normal(r, outward_normal);
+
+        let (u, v) = get_sphere_uv(&outward_normal);
+        rec.u = u;
+        rec.v = v;
 
         Some(rec)
     }
@@ -118,12 +135,18 @@ impl<M: Material> Hit for MovingSphere<M> {
             position: p,
             normal: Vec3::new(0.0, 0.0, 0.0),
             t: root,
+            u: 0.0,
+            v: 0.0,
             front_face: false,
             material: &self.material
         };
 
         let outward_normal = (rec.position - self.center(r.time())) / self.radius;
         rec.set_face_normal(r, outward_normal);
+
+        let (u, v) = get_sphere_uv(&outward_normal);
+        rec.u = u;
+        rec.v = v;
 
         Some(rec)
     }

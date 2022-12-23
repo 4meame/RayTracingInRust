@@ -9,6 +9,10 @@ pub struct HitRecord<'a> {
     pub position: Point3,
     pub normal: Vec3,
     pub t: f64,
+
+    pub u: f64,
+    pub v: f64,
+
     pub front_face: bool,
     
     // explaination: the reference counted smart pointer, Rc<T> type keeps track of the number of references to a value to determine whether or not the value is still in use
@@ -43,7 +47,9 @@ pub struct World {
 }
 
 impl World {
-
+    pub fn push(&mut self, hitable: impl Hit + 'static) {
+        self.list.push(Box::new(hitable))
+    }
 }
 
 impl Hit for World {

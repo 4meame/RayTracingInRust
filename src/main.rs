@@ -6,17 +6,19 @@ mod camera;
 mod mat;
 mod aabb;
 mod bvh;
+mod texture;
 
 use std::{io::{stderr, Write}};
 use rand::Rng;
 use rayon::prelude::*;
 use vec::{Vec3, Point3, Color};
 use ray::Ray;
-use hit::Hit;
+use hit::{Hit, World};
 use sphere::{Sphere, MovingSphere};
 use camera::Camera;
 use mat::{Lambertian, Metal, Dielectric};
 use bvh::BVH;
+use texture::{ConstantTexture, CheckTexture};
 
 fn ray_color(ray: &Ray, world: &Box<dyn Hit>, depth: u64) -> Color {
     if depth <= 0 {
@@ -55,7 +57,7 @@ fn random_scene() -> Box<dyn Hit> {
     let mut rng = rand::thread_rng();
     let mut world: Vec<Box<dyn Hit>> = Vec::new();
 
-    let ground_mat = Lambertian::new(Color::new(0.5, 0.5, 0.5));
+    let ground_mat = Lambertian::new(CheckTexture::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), ConstantTexture::new(Color::new(0.3, 0.3, 1.0))));
     let ground_sphere = Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground_mat);
 
     world.push(Box::new(ground_sphere));
@@ -70,8 +72,8 @@ fn random_scene() -> Box<dyn Hit> {
             if choose_mat < 0.8 {
                 // Diffuse
                 let albedo = Color::random(0.0..1.0) * Color::random(0.0..1.0);
-                let sphere_mat = Lambertian::new(albedo);
-                let center1 = center + Vec3::new(0.0, rng.gen_range(0.0..0.5), 0.0);
+                let sphere_mat = Lambertian::new(ConstantTexture::new(albedo));
+                let center1 = center + Vec3::new(0.0, rng.gen_range(0.0..0.01), 0.0);
                 let sphere = MovingSphere::new(center, center1, 0.0, 1.0, 0.2 ,sphere_mat);
 
                 world.push(Box::new(sphere));
@@ -94,7 +96,7 @@ fn random_scene() -> Box<dyn Hit> {
     }
 
     let mat1 = Dielectric::new(1.5);
-    let mat2 = Lambertian::new(Color::new(0.4, 0.2, 0.1));
+    let mat2 = Lambertian::new(ConstantTexture::new(Color::new(0.4, 0.2, 0.1)));
     let mat3 = Metal::new(Color::new(0.7, 0.6, 0.5), 0.0);
 
     let sphere1 = Sphere::new(Point3::new(0.0, 1.0, 0.0), 1.0, mat1);
@@ -108,12 +110,32 @@ fn random_scene() -> Box<dyn Hit> {
     Box::new(BVH::new( world, 0.0, 1.0))
 }
 
+fn two_spehre() -> Box<dyn Hit> {
+    let mut world = World::default();
+
+    let top_mat = Lambertian::new(CheckTexture::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), ConstantTexture::new(Color::new(0.3, 0.3, 1.0))));
+    let bottom_mat = Lambertian::new(CheckTexture::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), ConstantTexture::new(Color::new(0.3, 0.3, 1.0))));
+
+    let top_sphere = Sphere::new(Point3::new(0.0, 10.0, 0.0), 10.0, top_mat);
+    let bottom_sphere = Sphere::new(Point3::new(0.0, -10.0, 0.0), 10.0, bottom_mat);
+
+    world.push(top_sphere);
+    world.push(bottom_sphere);
+
+    Box::new(world)
+}
+
+enum Scene {
+    Random,
+    TwoSphere
+}
+
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 3.0 / 2.0;
-    const IMAGE_WIDTH: u64 = 600;
+    const IMAGE_WIDTH: u64 = 900;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 600;
+    const SAMPLES_PER_PIXEL: u64 = 1000;
     const MAX_DEPTH: u64 = 50;
 
     // world
@@ -136,15 +158,15 @@ fn main() {
     // world.push(Box::new(sphere_left_inner));
     // world.push(Box::new(sphere_right));
 
-    let world = random_scene();
+    // let world = random_scene();
 
     // camera
-    let lookfrom = Point3::new(13.0, 2.0, 3.0);
-    let lookat = Point3::new(0.0, 0.0, 0.0);
-    let vup = Vec3::new(0.0, 1.0, 0.0);
-    let dist_to_focus = 10.0;
-    let aperture = 0.1;
-    let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+    // let lookfrom = Point3::new(13.0, 2.0, 3.0);
+    // let lookat = Point3::new(0.0, 0.0, 0.0);
+    // let vup = Vec3::new(0.0, 1.0, 0.0);
+    // let dist_to_focus = 10.0;
+    // let aperture = 0.1;
+    // let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
     // let viewport_height = 2.0;
     // let viewport_width = viewport_height * ASPECT_RATIO;
     // let focal_length = 1.0;
@@ -153,6 +175,34 @@ fn main() {
     // let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
     // let vertical = Vec3::new(0.0, viewport_height, 0.0);
     // let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
+
+    let scene: Scene = Scene::TwoSphere;
+    let (world, camera) = match scene {
+        Scene::Random => {
+            let world = random_scene();
+
+            let lookfrom = Point3::new(13.0, 2.0, 3.0);
+            let lookat = Point3::new(0.0, 0.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.1;
+            let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, camera)
+        }
+        Scene::TwoSphere =>{
+            let world = two_spehre();
+
+            let lookfrom = Point3::new(13.0, 2.0, 3.0);
+            let lookat = Point3::new(0.0, 0.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.0;
+            let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, camera)
+        }
+    };
 
     println!("P3");
     println!("{} {}",IMAGE_WIDTH, IMAGE_HEIGHT);
