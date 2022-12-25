@@ -6,6 +6,8 @@ pub trait Texture: Sync {
     fn mapping(&self, u: f64, v: f64, p: &Vec3) -> Color;
 }
 
+
+#[derive(Clone)]
 pub struct ConstantTexture {
     value: Color
 }
@@ -24,6 +26,8 @@ impl Texture for ConstantTexture {
     }
 }
 
+
+#[derive(Clone)]
 pub struct CheckTexture<T: Texture, U: Texture> {
     odd: T,
     even: U
@@ -49,6 +53,7 @@ impl<T: Texture, U: Texture> Texture for CheckTexture<T, U> {
     }
 }
 
+#[derive(Clone)]
 pub struct NoiseTexture {
     noise: Perlin,
     scale: f64
@@ -73,6 +78,8 @@ impl Texture for NoiseTexture {
     }
 }
 
+
+#[derive(Clone)]
 pub struct ImageTexture {
     data: Vec<u8>,
     width: u32,

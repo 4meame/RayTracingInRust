@@ -2,6 +2,7 @@ mod vec;
 mod ray;
 mod hit;
 mod sphere;
+mod rect;
 mod camera;
 mod mat;
 mod aabb;
@@ -16,12 +17,13 @@ use vec::{Vec3, Point3, Color};
 use ray::Ray;
 use hit::{Hit, World};
 use sphere::{Sphere, MovingSphere};
+use rect::{Plane, AARect};
 use camera::Camera;
-use mat::{Lambertian, Metal, Dielectric};
+use mat::{Lambertian, Metal, Dielectric, DiffuseLight};
 use bvh::BVH;
 use texture::{ConstantTexture, CheckTexture, NoiseTexture, ImageTexture};
 
-fn ray_color(ray: &Ray, world: &Box<dyn Hit>, depth: u64) -> Color {
+fn ray_color(ray: &Ray, color: Color, world: &Box<dyn Hit>, depth: u64) -> Color {
     if depth <= 0 {
         // if we've exceeded the ray bounce limit, no more light is gathered
         return Color::new(0.0, 0.0, 0.0)
@@ -40,17 +42,21 @@ fn ray_color(ray: &Ray, world: &Box<dyn Hit>, depth: u64) -> Color {
         // let r = Ray::new(rec.position, target - rec.position);
         // 0.5 * ray_color(&r, world, depth - 1)
 
+        let emitted: Color = rec.material.emitted(rec.u, rec.v, &rec.position);
+
         if let Some((attenuation, scattered)) = rec.material.scatter(ray, &rec) {
-            attenuation * ray_color(&scattered, world, depth - 1)
+            emitted + attenuation * ray_color(&scattered, color, world, depth - 1)
         } else {
-            Color::new(0.0, 0.0, 0.0)
+            emitted
         }
 
     } else {
-    let unit_direction = ray.direction().normalized();
-    let t = 0.5 * (unit_direction.y() + 1.0);
-    //lerp white and blue with direction of y
-    (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
+    // let unit_direction = ray.direction().normalized();
+    // let t = 0.5 * (unit_direction.y() + 1.0);
+
+    // //lerp white and blue with direction of y
+    // (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0);
+    color
     }
 }
 
@@ -151,20 +157,58 @@ fn earth() -> Box<dyn Hit> {
     Box::new(earth)
 }
 
+fn light_room() -> Box<dyn Hit> {
+    let mut world = World::default();
+
+    let bottom_mat = Lambertian::new(ConstantTexture::new(Color::new(0.7, 0.7, 0.7)));
+    let top_mat = Lambertian::new(ConstantTexture::new(Color::new(0.0, 0.1843, 0.6549)));
+    let emitted = DiffuseLight::new(ConstantTexture::new(Color::new(4.0, 4.0, 4.0)));
+    
+    let ground = Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, bottom_mat);
+    let sphere = Sphere::new(Point3::new(0.0, 2.0, 0.0), 2.0, top_mat);
+    let plane = AARect::new(Plane::XY, 3.0, 5.0, 1.0, 3.0, -2.0, emitted);
+
+    world.push(ground);
+    world.push(sphere);
+    world.push(plane);
+
+    Box::new(world)
+}
+
+fn cornell_box() -> Box<dyn Hit> {
+    let mut world = World::default();
+
+    let red = Lambertian::new(ConstantTexture::new(Color::new(0.65, 0.05, 0.05)));
+    let white = Lambertian::new(ConstantTexture::new(Color::new(0.73, 0.73, 0.73)));
+    let green = Lambertian::new(ConstantTexture::new(Color::new(0.12, 0.45, 0.15)));
+    let light = DiffuseLight::new(ConstantTexture::new(Color::new(15.0, 15.0, 15.0)));
+
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, green));
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, red));
+    world.push(AARect::new(Plane::XZ, 213.0, 343.0, 227.0, 332.0, 554.0, light));
+    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
+    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+    world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white));
+
+    Box::new(world)
+}
+
 enum Scene {
     Random,
     TwoSphere,
     TwoPerlinSphere,
-    Earth
+    Earth,
+    LightRoom,
+    CornellBox
 }
 
 fn main() {
     // image
-    const ASPECT_RATIO: f64 = 3.0 / 2.0;
-    const IMAGE_WIDTH: u64 = 900;
+    const ASPECT_RATIO: f64 = 1.0;
+    const IMAGE_WIDTH: u64 = 800;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 1000;
-    const MAX_DEPTH: u64 = 50;
+    const SAMPLES_PER_PIXEL: u64 = 10000;
+    const MAX_DEPTH: u64 = 300;
 
     // world
     // let mut world = World::new();
@@ -204,10 +248,12 @@ fn main() {
     // let vertical = Vec3::new(0.0, viewport_height, 0.0);
     // let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
 
-    let scene: Scene = Scene::Earth;
-    let (world, camera) = match scene {
+    let scene: Scene = Scene::CornellBox;
+    let (world, background, camera) = match scene {
         Scene::Random => {
             let world = random_scene();
+
+            let backgournd = Color::new(0.7, 0.8, 1.0);
 
             let lookfrom = Point3::new(13.0, 2.0, 3.0);
             let lookat = Point3::new(0.0, 0.0, 0.0);
@@ -216,10 +262,12 @@ fn main() {
             let aperture = 0.1;
             let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
-            (world, camera)
+            (world, backgournd, camera)
         }
         Scene::TwoSphere =>{
             let world = two_spehre();
+
+            let backgournd = Color::new(0.7, 0.8, 1.0);
 
             let lookfrom = Point3::new(13.0, 2.0, 3.0);
             let lookat = Point3::new(0.0, 0.0, 0.0);
@@ -228,10 +276,12 @@ fn main() {
             let aperture = 0.0;
             let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
-            (world, camera)
+            (world, backgournd, camera)
         }
         Scene::TwoPerlinSphere => {
             let world = two_perlin_sphere();
+
+            let backgournd = Color::new(0.7, 0.8, 1.0);
 
             let lookfrom = Point3::new(1013.0, 2.0, 1003.0);
             let lookat = Point3::new(1000.0, 0.0, 1000.0);
@@ -240,10 +290,12 @@ fn main() {
             let aperture = 0.0;
             let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
-            (world, camera)
+            (world, backgournd, camera)
         }
         Scene::Earth => {
             let world = earth();
+
+            let backgournd = Color::new(0.7, 0.8, 1.0);
 
             let lookfrom = Point3::new(13.0, 2.0, 3.0);
             let lookat = Point3::new(0.0, 0.0, 0.0);
@@ -252,8 +304,36 @@ fn main() {
             let aperture = 0.1;
             let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
-            (world, camera)
+            (world, backgournd, camera)
         }
+        Scene::LightRoom => {
+            let world = light_room();
+
+            let backgournd = Color::new(0.0, 0.0, 0.0);
+
+            let lookfrom = Point3::new(26.0, 3.0, 6.0);
+            let lookat = Point3::new(0.0, 2.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.0;
+            let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, backgournd, camera)
+        }
+        Scene::CornellBox => {
+            let world = cornell_box();
+            
+            let backgournd = Color::new(0.0, 0.0, 0.0);
+
+            let lookfrom = Point3::new(278.0, 278.0, -800.0);
+            let lookat = Point3::new(278.0, 278.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.05;
+            let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, backgournd, camera)
+        },
     };
 
     println!("P3");
@@ -310,7 +390,13 @@ fn main() {
                 let v = ((j as f64) + random_v) / ((IMAGE_HEIGHT - 1) as f64);
 
                 let r = camera.get_ray(u, v);
-                ray_color(&r, &world, MAX_DEPTH)
+
+                // let unit_direction = r.direction().normalized();
+                // let t = 0.5 * (unit_direction.y() + 1.0);
+                // //lerp white and blue with direction of y
+                // let backgournd = (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0);
+
+                ray_color(&r, background, &world, MAX_DEPTH)
             })
             .sum();
             
