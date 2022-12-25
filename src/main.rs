@@ -19,7 +19,7 @@ use sphere::{Sphere, MovingSphere};
 use camera::Camera;
 use mat::{Lambertian, Metal, Dielectric};
 use bvh::BVH;
-use texture::{ConstantTexture, CheckTexture, NoiseTexture};
+use texture::{ConstantTexture, CheckTexture, NoiseTexture, ImageTexture};
 
 fn ray_color(ray: &Ray, world: &Box<dyn Hit>, depth: u64) -> Color {
     if depth <= 0 {
@@ -142,10 +142,20 @@ fn two_perlin_sphere() -> Box<dyn Hit> {
     Box::new(world)
 }
 
+fn earth() -> Box<dyn Hit> {
+    let image = image::open("earthmap.jpg").expect("image not found").to_rgb8();
+    let (width ,height) = image.dimensions();
+    let data = image.into_raw();
+    let texture = ImageTexture::new(data, width, height);
+    let earth = Sphere::new(Vec3::new(0.0, 0.0, 0.0), 2.0, Lambertian::new(texture));
+    Box::new(earth)
+}
+
 enum Scene {
     Random,
     TwoSphere,
-    TwoPerlinSphere
+    TwoPerlinSphere,
+    Earth
 }
 
 fn main() {
@@ -153,7 +163,7 @@ fn main() {
     const ASPECT_RATIO: f64 = 3.0 / 2.0;
     const IMAGE_WIDTH: u64 = 900;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 500;
+    const SAMPLES_PER_PIXEL: u64 = 1000;
     const MAX_DEPTH: u64 = 50;
 
     // world
@@ -194,7 +204,7 @@ fn main() {
     // let vertical = Vec3::new(0.0, viewport_height, 0.0);
     // let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
 
-    let scene: Scene = Scene::TwoPerlinSphere;
+    let scene: Scene = Scene::Earth;
     let (world, camera) = match scene {
         Scene::Random => {
             let world = random_scene();
@@ -228,6 +238,18 @@ fn main() {
             let vup = Vec3::new(0.0, 1.0, 0.0);
             let dist_to_focus = 10.0;
             let aperture = 0.0;
+            let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, camera)
+        }
+        Scene::Earth => {
+            let world = earth();
+
+            let lookfrom = Point3::new(13.0, 2.0, 3.0);
+            let lookat = Point3::new(0.0, 0.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.1;
             let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
             (world, camera)

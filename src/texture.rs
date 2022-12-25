@@ -72,3 +72,43 @@ impl Texture for NoiseTexture {
         Color::new(1.0, 1.0, 1.0) * 0.5 * (1.0 + f64::sin(self.scale * p.z() + 10.0 * self.noise.turb(p, self.scale, 7)))
     }
 }
+
+pub struct ImageTexture {
+    data: Vec<u8>,
+    width: u32,
+    height: u32
+}
+
+impl ImageTexture {
+    pub fn new(data: Vec<u8>, width: u32, height: u32) -> ImageTexture {
+        ImageTexture {
+            data,
+            width,
+            height
+        }
+    }
+}
+
+impl Texture for ImageTexture {
+    fn mapping(&self, u: f64, v: f64, p: &Vec3) -> Color {
+        let width = self.width as usize;
+        let height = self.height as usize;
+        // clamp input texture coordinates to [0,1] x [1,0]
+        let mut i = (u.clamp(0.0, 1.0) * width as f64) as usize;
+        // flip V to image coordinates
+        let mut j = ((1.0 - v).clamp(0.0, 1.0) * height as f64) as usize;
+        // clamp integer mapping, since actual coordinates should be less than 1.0
+        if i > width - 1 {
+            i = width -1
+        }
+        if j > height - 1 {
+            j = height -1 
+        }
+        //3 bytes per pixel
+        let idx = 3 * i + 3 * width * j;
+        let r = self.data[idx] as f64 / 255.0;
+        let g = self.data[idx + 1] as f64 / 255.0;
+        let b = self.data[idx + 2] as f64 / 255.0;
+        Color::new(r, g, b)
+    }
+}
