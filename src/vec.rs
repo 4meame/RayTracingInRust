@@ -228,6 +228,16 @@ impl DivAssign<f64> for Vec3 {
     }
 }
 
+impl Mul<&Vec3> for f64 {
+    type Output = Vec3;
+
+    fn mul(self, other: &Vec3) -> Vec3 {
+        Vec3 { 
+            e: [self * other[0], self * other[1], self * other[2]]
+        }
+    }
+}
+
 /// allow accumulation of vectors from an iterator.
 impl std::iter::Sum for Vec3 {
     fn sum<I>(iter: I) -> Self

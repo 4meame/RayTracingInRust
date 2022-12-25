@@ -6,6 +6,7 @@ mod camera;
 mod mat;
 mod aabb;
 mod bvh;
+mod perlin;
 mod texture;
 
 use std::{io::{stderr, Write}};
@@ -18,7 +19,7 @@ use sphere::{Sphere, MovingSphere};
 use camera::Camera;
 use mat::{Lambertian, Metal, Dielectric};
 use bvh::BVH;
-use texture::{ConstantTexture, CheckTexture};
+use texture::{ConstantTexture, CheckTexture, NoiseTexture};
 
 fn ray_color(ray: &Ray, world: &Box<dyn Hit>, depth: u64) -> Color {
     if depth <= 0 {
@@ -125,9 +126,26 @@ fn two_spehre() -> Box<dyn Hit> {
     Box::new(world)
 }
 
+fn two_perlin_sphere() -> Box<dyn Hit> {
+    let mut world = World::default();
+
+    let top_mat = Lambertian::new(NoiseTexture::new(2.0));
+    let bottom_mat = Lambertian::new(NoiseTexture::new(2.0));
+
+    //hash goes wrong in negative field, move object to Fitst Quadrant for now
+    let top_sphere = Sphere::new(Point3::new(1000.0, 2.0, 1000.0), 2.0, top_mat);
+    let bottom_sphere = Sphere::new(Point3::new(1000.0, -1000.0, 1000.0), 1000.0, bottom_mat);
+
+    world.push(top_sphere);
+    world.push(bottom_sphere);
+
+    Box::new(world)
+}
+
 enum Scene {
     Random,
-    TwoSphere
+    TwoSphere,
+    TwoPerlinSphere
 }
 
 fn main() {
@@ -135,7 +153,7 @@ fn main() {
     const ASPECT_RATIO: f64 = 3.0 / 2.0;
     const IMAGE_WIDTH: u64 = 900;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 1000;
+    const SAMPLES_PER_PIXEL: u64 = 500;
     const MAX_DEPTH: u64 = 50;
 
     // world
@@ -176,7 +194,7 @@ fn main() {
     // let vertical = Vec3::new(0.0, viewport_height, 0.0);
     // let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
 
-    let scene: Scene = Scene::TwoSphere;
+    let scene: Scene = Scene::TwoPerlinSphere;
     let (world, camera) = match scene {
         Scene::Random => {
             let world = random_scene();
@@ -195,6 +213,18 @@ fn main() {
 
             let lookfrom = Point3::new(13.0, 2.0, 3.0);
             let lookat = Point3::new(0.0, 0.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.0;
+            let camera = Camera::new(lookfrom, lookat, vup, 20.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, camera)
+        }
+        Scene::TwoPerlinSphere => {
+            let world = two_perlin_sphere();
+
+            let lookfrom = Point3::new(1013.0, 2.0, 1003.0);
+            let lookat = Point3::new(1000.0, 0.0, 1000.0);
             let vup = Vec3::new(0.0, 1.0, 0.0);
             let dist_to_focus = 10.0;
             let aperture = 0.0;
