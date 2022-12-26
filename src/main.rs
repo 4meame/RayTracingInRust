@@ -1,8 +1,11 @@
 mod vec;
 mod ray;
+mod translate;
+mod rotate;
 mod hit;
 mod sphere;
 mod rect;
+mod cube;
 mod camera;
 mod mat;
 mod aabb;
@@ -15,15 +18,18 @@ use rand::Rng;
 use rayon::prelude::*;
 use vec::{Vec3, Point3, Color};
 use ray::Ray;
-use hit::{Hit, World};
+use translate::Translate;
+use rotate::{Axis, Rotate};
+use hit::{Hittable, HittableList};
 use sphere::{Sphere, MovingSphere};
 use rect::{Plane, AARect};
+use cube::Cube;
 use camera::Camera;
 use mat::{Lambertian, Metal, Dielectric, DiffuseLight};
 use bvh::BVH;
 use texture::{ConstantTexture, CheckTexture, NoiseTexture, ImageTexture};
 
-fn ray_color(ray: &Ray, color: Color, world: &Box<dyn Hit>, depth: u64) -> Color {
+fn ray_color(ray: &Ray, color: Color, world: &Box<dyn Hittable>, depth: u64) -> Color {
     if depth <= 0 {
         // if we've exceeded the ray bounce limit, no more light is gathered
         return Color::new(0.0, 0.0, 0.0)
@@ -60,9 +66,9 @@ fn ray_color(ray: &Ray, color: Color, world: &Box<dyn Hit>, depth: u64) -> Color
     }
 }
 
-fn random_scene() -> Box<dyn Hit> {
+fn random_scene() -> Box<dyn Hittable> {
     let mut rng = rand::thread_rng();
-    let mut world: Vec<Box<dyn Hit>> = Vec::new();
+    let mut world: Vec<Box<dyn Hittable>> = Vec::new();
 
     let ground_mat = Lambertian::new(CheckTexture::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), ConstantTexture::new(Color::new(0.3, 0.3, 1.0))));
     let ground_sphere = Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground_mat);
@@ -117,8 +123,8 @@ fn random_scene() -> Box<dyn Hit> {
     Box::new(BVH::new( world, 0.0, 1.0))
 }
 
-fn two_spehre() -> Box<dyn Hit> {
-    let mut world = World::default();
+fn two_spehre() -> Box<dyn Hittable> {
+    let mut world = HittableList::default();
 
     let top_mat = Lambertian::new(CheckTexture::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), ConstantTexture::new(Color::new(0.3, 0.3, 1.0))));
     let bottom_mat = Lambertian::new(CheckTexture::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), ConstantTexture::new(Color::new(0.3, 0.3, 1.0))));
@@ -132,8 +138,8 @@ fn two_spehre() -> Box<dyn Hit> {
     Box::new(world)
 }
 
-fn two_perlin_sphere() -> Box<dyn Hit> {
-    let mut world = World::default();
+fn two_perlin_sphere() -> Box<dyn Hittable> {
+    let mut world = HittableList::default();
 
     let top_mat = Lambertian::new(NoiseTexture::new(2.0));
     let bottom_mat = Lambertian::new(NoiseTexture::new(2.0));
@@ -148,7 +154,7 @@ fn two_perlin_sphere() -> Box<dyn Hit> {
     Box::new(world)
 }
 
-fn earth() -> Box<dyn Hit> {
+fn earth() -> Box<dyn Hittable> {
     let image = image::open("earthmap.jpg").expect("image not found").to_rgb8();
     let (width ,height) = image.dimensions();
     let data = image.into_raw();
@@ -157,8 +163,8 @@ fn earth() -> Box<dyn Hit> {
     Box::new(earth)
 }
 
-fn light_room() -> Box<dyn Hit> {
-    let mut world = World::default();
+fn light_room() -> Box<dyn Hittable> {
+    let mut world = HittableList::default();
 
     let bottom_mat = Lambertian::new(ConstantTexture::new(Color::new(0.7, 0.7, 0.7)));
     let top_mat = Lambertian::new(ConstantTexture::new(Color::new(0.0, 0.1843, 0.6549)));
@@ -175,20 +181,29 @@ fn light_room() -> Box<dyn Hit> {
     Box::new(world)
 }
 
-fn cornell_box() -> Box<dyn Hit> {
-    let mut world = World::default();
+fn cornell_box() -> Box<dyn Hittable> {
+    let mut world = HittableList::default();
 
     let red = Lambertian::new(ConstantTexture::new(Color::new(0.65, 0.05, 0.05)));
     let white = Lambertian::new(ConstantTexture::new(Color::new(0.73, 0.73, 0.73)));
     let green = Lambertian::new(ConstantTexture::new(Color::new(0.12, 0.45, 0.15)));
-    let light = DiffuseLight::new(ConstantTexture::new(Color::new(15.0, 15.0, 15.0)));
+    let light = DiffuseLight::new(ConstantTexture::new(Color::new(25.0, 25.0, 25.0)));
 
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, green));
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, red));
     world.push(AARect::new(Plane::XZ, 213.0, 343.0, 227.0, 332.0, 554.0, light));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
-    world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white));
+    world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+
+    world.push(
+        Translate::new(
+            Rotate::new(Axis::Y,
+                        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(165.0, 165.0, 165.0), white.clone()),-18.0), Vec3::new(130.0, 0.0, 65.0)));
+    world.push(
+        Translate::new(
+            Rotate::new(Axis::Y,
+                        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(165.0, 330.0, 165.0), white),15.0), Vec3::new(265.0, 0.0, 295.0)));
 
     Box::new(world)
 }
@@ -205,10 +220,10 @@ enum Scene {
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 1.0;
-    const IMAGE_WIDTH: u64 = 800;
+    const IMAGE_WIDTH: u64 = 600;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
     const SAMPLES_PER_PIXEL: u64 = 10000;
-    const MAX_DEPTH: u64 = 300;
+    const MAX_DEPTH: u64 = 3000;
 
     // world
     // let mut world = World::new();

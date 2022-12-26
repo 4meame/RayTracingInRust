@@ -1,12 +1,12 @@
 use std::cmp::Ordering;
 use super::aabb;
 use super::aabb::AABB;
-use super::hit::{Hit, HitRecord};
+use super::hit::{Hittable, HitRecord};
 use super::ray::Ray;
 
 enum BVHNode {
     Branch { left: Box<BVH>, right: Box<BVH> },
-    Leaf(Box<dyn Hit>)
+    Leaf(Box<dyn Hittable>)
 }
 
 pub struct BVH {
@@ -15,8 +15,8 @@ pub struct BVH {
 }
 
 impl BVH {
-    pub fn new(mut hit: Vec<Box<dyn Hit>>, time0: f64, time1: f64) -> BVH {
-        fn box_compare(time0: f64, time1: f64, axis: usize) -> impl FnMut(&Box<dyn Hit>, &Box<dyn Hit>) -> Ordering {
+    pub fn new(mut hit: Vec<Box<dyn Hittable>>, time0: f64, time1: f64) -> BVH {
+        fn box_compare(time0: f64, time1: f64, axis: usize) -> impl FnMut(&Box<dyn Hittable>, &Box<dyn Hittable>) -> Ordering {
             move |a, b| {
                 let a_bbox = a.bounding_box(time0, time1);
                 let b_bbox = b.bounding_box(time0, time1);
@@ -30,7 +30,7 @@ impl BVH {
             }
         }
 
-        fn axis_range(hit: &Vec<Box<dyn Hit>>, time0: f64, time1: f64, axis: usize) -> f64 {
+        fn axis_range(hit: &Vec<Box<dyn Hittable>>, time0: f64, time1: f64, axis: usize) -> f64 {
             let (min, max) = hit.iter().fold((f64::MAX, f64::MIN), |(bmin, bmax), hit| {
                 if let Some(aabb) = hit.bounding_box(time0, time1) {
                     (bmin.min(aabb.min[axis]), bmax.max(aabb.max[axis]))
@@ -73,7 +73,7 @@ impl BVH {
     }
 }
 
-impl Hit for BVH {
+impl Hittable for BVH {
     fn hit(&self, r: &Ray, t_min: f64, mut t_max: f64) -> Option<HitRecord> {
         if self.bbox.hit(r, t_min, t_max) {
             match &self.tree {
