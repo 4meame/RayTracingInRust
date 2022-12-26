@@ -12,6 +12,7 @@ mod aabb;
 mod bvh;
 mod perlin;
 mod texture;
+mod medium;
 
 use std::{io::{stderr, Write}};
 use rand::Rng;
@@ -28,6 +29,7 @@ use camera::Camera;
 use mat::{Lambertian, Metal, Dielectric, DiffuseLight};
 use bvh::BVH;
 use texture::{ConstantTexture, CheckTexture, NoiseTexture, ImageTexture};
+use medium::ConstantMedium;
 
 fn ray_color(ray: &Ray, color: Color, world: &Box<dyn Hittable>, depth: u64) -> Color {
     if depth <= 0 {
@@ -208,13 +210,44 @@ fn cornell_box() -> Box<dyn Hittable> {
     Box::new(world)
 }
 
+fn cornell_box_with_smoke() -> Box<dyn Hittable> {
+    let mut world = HittableList::default();
+
+    let red = Lambertian::new(ConstantTexture::new(Color::new(0.65, 0.05, 0.05)));
+    let white = Lambertian::new(ConstantTexture::new(Color::new(0.73, 0.73, 0.73)));
+    let green = Lambertian::new(ConstantTexture::new(Color::new(0.12, 0.45, 0.15)));
+    let light = DiffuseLight::new(ConstantTexture::new(Color::new(25.0, 25.0, 25.0)));
+
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, green));
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, red));
+    world.push(AARect::new(Plane::XZ, 213.0, 343.0, 227.0, 332.0, 554.0, light));
+    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
+    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+    world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+
+    let box1 = 
+        Translate::new(
+            Rotate::new(Axis::Y,
+                        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(165.0, 165.0, 165.0), white.clone()),-18.0), Vec3::new(130.0, 0.0, 65.0));
+    let box2 =
+        Translate::new(
+            Rotate::new(Axis::Y,
+                        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(165.0, 330.0, 165.0), white),15.0), Vec3::new(265.0, 0.0, 295.0));
+
+    world.push(ConstantMedium::new(box1, 0.01, ConstantTexture::new(Color::new(1.0, 1.0, 1.0))));
+    world.push(ConstantMedium::new(box2, 0.01, ConstantTexture::new(Color::new(0.0, 0.0, 0.0))));
+
+    Box::new(world)
+}
+
 enum Scene {
     Random,
     TwoSphere,
     TwoPerlinSphere,
     Earth,
     LightRoom,
-    CornellBox
+    CornellBox,
+    CornellSmoke
 }
 
 fn main() {
@@ -223,7 +256,7 @@ fn main() {
     const IMAGE_WIDTH: u64 = 600;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
     const SAMPLES_PER_PIXEL: u64 = 10000;
-    const MAX_DEPTH: u64 = 3000;
+    const MAX_DEPTH: u64 = 500;
 
     // world
     // let mut world = World::new();
@@ -263,7 +296,7 @@ fn main() {
     // let vertical = Vec3::new(0.0, viewport_height, 0.0);
     // let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
 
-    let scene: Scene = Scene::CornellBox;
+    let scene: Scene = Scene::CornellSmoke;
     let (world, background, camera) = match scene {
         Scene::Random => {
             let world = random_scene();
@@ -349,6 +382,20 @@ fn main() {
 
             (world, backgournd, camera)
         },
+        Scene::CornellSmoke => {
+            let world = cornell_box_with_smoke();
+            
+            let backgournd = Color::new(0.0, 0.0, 0.0);
+
+            let lookfrom = Point3::new(278.0, 278.0, -800.0);
+            let lookat = Point3::new(278.0, 278.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.05;
+            let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, backgournd, camera)
+        }
     };
 
     println!("P3");

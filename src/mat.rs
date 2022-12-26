@@ -141,3 +141,23 @@ impl<T: Texture> Material for DiffuseLight<T> {
         self.emit.mapping(u, v, p)
     }
 }
+
+#[derive(Clone)]
+pub struct Isotropic<T: Texture> {
+    albedo: T
+}
+
+impl<T: Texture> Isotropic<T> {
+    pub fn new(albedo: T) -> Isotropic<T> { 
+        Isotropic { 
+            albedo 
+        } 
+    }
+}
+
+impl<T: Texture> Material for Isotropic<T> {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+        let scattered = Ray::new(rec.position, Vec3::random_in_unit_sphere(), r_in.time());
+        Some((self.albedo.mapping(rec.u, rec.v, &rec.position), scattered))
+    }
+}
