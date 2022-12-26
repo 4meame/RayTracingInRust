@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 use super::vec::{Vec3, Point3};
 use super::ray::Ray;
-use super::hit::{Hit, HitRecord};
+use super::hit::{Hittable, HitRecord};
 use super::mat::Material;
 use super::aabb;
 use super::aabb::AABB;
@@ -38,7 +38,7 @@ impl<M: Material> Sphere<M> {
     }
 }
 
-impl<M: Material> Hit for Sphere<M> {
+impl<M: Material> Hittable for Sphere<M> {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let oc = r.origin() - self.center;
         let a = r.direction().length().powi(2);
@@ -115,7 +115,7 @@ impl<M: Material> MovingSphere<M> {
     }
 }
 
-impl<M: Material> Hit for MovingSphere<M> {
+impl<M: Material> Hittable for MovingSphere<M> {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let oc = r.origin() - self.center(r.time());
         let a = r.direction().length().powi(2);

@@ -22,7 +22,7 @@ pub struct HitRecord<'a> {
     pub material: &'a dyn Material
 }
 
-pub trait Hit: Sync {
+pub trait Hittable: Sync {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
     fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB>;
 }
@@ -42,17 +42,17 @@ impl HitRecord<'_> {
 // pub type World = Vec<Box<dyn Hit>>;
 
 #[derive(Default)]
-pub struct World {
-    list: Vec<Box<dyn Hit>>
+pub struct HittableList {
+    list: Vec<Box<dyn Hittable>>
 }
 
-impl World {
-    pub fn push(&mut self, hitable: impl Hit + 'static) {
+impl HittableList {
+    pub fn push(&mut self, hitable: impl Hittable + 'static) {
         self.list.push(Box::new(hitable))
     }
 }
 
-impl Hit for World {
+impl Hittable for HittableList {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let mut temp_rec = None;
         let mut cloest_so_far = t_max;

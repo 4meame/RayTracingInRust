@@ -1,5 +1,5 @@
 use super::mat::Material;
-use super::hit::{Hit, HitRecord};
+use super::hit::{Hittable, HitRecord};
 use super::aabb::AABB;
 use super::vec::{Vec3};
 
@@ -33,11 +33,11 @@ impl<M: Material> AARect<M> {
     }
 }
 
-impl<M: Material> Hit for AARect<M> {
+impl<M: Material> Hittable for AARect<M> {
     fn hit(&self, r: &crate::ray::Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let (k_axis_index, a_axis_index, b_axis_index) = match &self.plane {
             Plane::YZ => (0, 1, 2),
-            Plane::XZ => (1, 2, 0),
+            Plane::XZ => (1, 0, 2),
             Plane::XY => (2, 0, 1)
         };
 
