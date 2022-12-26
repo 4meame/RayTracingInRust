@@ -3,4 +3,4 @@ Follow https://raytracing.github.io/books/RayTracingInOneWeekend.html Ray Tracin
 Implemented by Rust.
 
 ![Image text](img/image.jpg)  
-![Image text](img/CornellBox.png)![Image text](img/light.png)  
+![Image text](img/CornellBox.png)![Image text](img/light.png)
