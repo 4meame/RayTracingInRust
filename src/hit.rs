@@ -47,8 +47,8 @@ pub struct HittableList {
 }
 
 impl HittableList {
-    pub fn push(&mut self, hitable: impl Hittable + 'static) {
-        self.list.push(Box::new(hitable))
+    pub fn push(&mut self, hittable: impl Hittable + 'static) {
+        self.list.push(Box::new(hittable))
     }
 }
 

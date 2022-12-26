@@ -189,6 +189,7 @@ fn cornell_box() -> Box<dyn Hittable> {
     let red = Lambertian::new(ConstantTexture::new(Color::new(0.65, 0.05, 0.05)));
     let white = Lambertian::new(ConstantTexture::new(Color::new(0.73, 0.73, 0.73)));
     let green = Lambertian::new(ConstantTexture::new(Color::new(0.12, 0.45, 0.15)));
+    let dielectric = Dielectric::new(1.5);
     let light = DiffuseLight::new(ConstantTexture::new(Color::new(25.0, 25.0, 25.0)));
 
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, green));
@@ -201,11 +202,11 @@ fn cornell_box() -> Box<dyn Hittable> {
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(165.0, 165.0, 165.0), white.clone()),-18.0), Vec3::new(130.0, 0.0, 65.0)));
+                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 165.0, 165.0), dielectric),-18.0), Vec3::new(130.0, 0.0, 65.0)));
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(165.0, 330.0, 165.0), white),15.0), Vec3::new(265.0, 0.0, 295.0)));
+                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 330.0, 165.0), white),15.0), Vec3::new(265.0, 0.0, 295.0)));
 
     Box::new(world)
 }
@@ -228,14 +229,72 @@ fn cornell_box_with_smoke() -> Box<dyn Hittable> {
     let box1 = 
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(165.0, 165.0, 165.0), white.clone()),-18.0), Vec3::new(130.0, 0.0, 65.0));
+                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 165.0, 165.0), white.clone()),-18.0), Vec3::new(130.0, 0.0, 65.0));
     let box2 =
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(165.0, 330.0, 165.0), white),15.0), Vec3::new(265.0, 0.0, 295.0));
+                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 330.0, 165.0), white),15.0), Vec3::new(265.0, 0.0, 295.0));
 
     world.push(ConstantMedium::new(box1, 0.01, ConstantTexture::new(Color::new(1.0, 1.0, 1.0))));
     world.push(ConstantMedium::new(box2, 0.01, ConstantTexture::new(Color::new(0.0, 0.0, 0.0))));
+
+    Box::new(world)
+}
+
+fn final_scene() -> Box<dyn Hittable> {
+    let mut world = HittableList::default();
+
+    let mut rng = rand::thread_rng();
+    let ground = Lambertian::new(ConstantTexture::new(Color::new(0.48, 0.83, 0.53)));
+    let mut box_list1: Vec<Box<dyn Hittable>> = Vec::new();
+    let boxes_per_side = 20;
+    for i in 0..boxes_per_side {
+        for j in 0..boxes_per_side {
+            let w = 100.0;
+            let x0 = -1000.0 + i as f64 * w;
+            let z0 = -1000.0 + j as f64 * w;
+            let y0 = 0.0;
+            let x1 = x0 + w;
+            let y1 = 100.0 * (rng.gen::<f64>() + 0.01);
+            let z1 = z0 + w;
+            box_list1.push(Box::new(Cube::new(Point3::new(x0, y0, z0), Point3::new(x1, y1, z1), ground.clone())));
+        }
+    }
+    world.push(BVH::new(box_list1, 0.0, 1.0));
+
+    let light = DiffuseLight::new(ConstantTexture::new(Color::new(7.0, 7.0, 7.0)));
+    world.push(AARect::new(Plane::XZ, 147.0, 412.0, 123.0, 423.0, 554.0, light));
+
+    let center = Point3::new(400.0, 400.0, 200.0);
+    world.push(MovingSphere::new(center, center + Point3::new(30.0, 0.0, 0.0), 0.0, 1.0, 50.0, Lambertian::new(ConstantTexture::new(Color::new(0.7, 0.3, 0.1)))));
+    world.push(Sphere::new(Point3::new(260.0, 150.0, 45.0), 50.0, Dielectric::new(1.5)));
+    world.push(Sphere::new(Point3::new(0.0, 150.0, 145.0), 50.0, Metal::new(Color::new(0.8, 0.8, 0.9), 1.0)));
+
+    let boundary = Sphere::new(Point3::new(360.0, 150.0, 145.0), 70.0, Dielectric::new(1.5));
+    world.push(boundary.clone());
+    world.push(ConstantMedium::new(boundary, 0.2, ConstantTexture::new(Color::new(0.2, 0.4, 0.9))));
+
+    let boundary = Sphere::new(Point3::new(0.0, 0.0, 0.0), 5000.0, Dielectric::new(1.5));
+    world.push(ConstantMedium::new(boundary, 0.0001, ConstantTexture::new(Color::new(1.0, 1.0, 1.0))));
+
+    let image = image::open("earthmap.jpg").expect("image not found").to_rgb8();
+    let (nx, ny) = image.dimensions();
+    let data = image.into_raw();
+    let texture = ImageTexture::new(data, nx, ny);
+    world.push(Sphere::new(Point3::new(400.0, 200.0, 400.0), 100.0, Lambertian::new(texture)));
+    world.push(Sphere::new(Point3::new(220.0, 280.0, 300.0), 80.0, Lambertian::new(NoiseTexture::new(0.1))));
+
+    let white = Lambertian::new(ConstantTexture::new(Color::new(0.73, 0.73, 0.73)));
+    let mut box_list2: Vec<Box<dyn Hittable>> = Vec::new();
+    let ns = 1000;
+    for _ in 0..ns {
+        box_list2.push(Box::new(Sphere::new(Point3::new(165.0 * rng.gen::<f64>(), 165.0 * rng.gen::<f64>(), 165.0 * rng.gen::<f64>()), 10.0, white.clone())));
+    }
+    world.push(
+        Translate::new(
+            Rotate::new(Axis::Y, BVH::new(box_list2, 0.0, 0.1), 15.0),
+                Point3::new(-100.0, 270.0, 395.0))
+    );
 
     Box::new(world)
 }
@@ -247,13 +306,14 @@ enum Scene {
     Earth,
     LightRoom,
     CornellBox,
-    CornellSmoke
+    CornellSmoke,
+    FinalScene
 }
 
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 1.0;
-    const IMAGE_WIDTH: u64 = 600;
+    const IMAGE_WIDTH: u64 = 800;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
     const SAMPLES_PER_PIXEL: u64 = 10000;
     const MAX_DEPTH: u64 = 500;
@@ -296,7 +356,7 @@ fn main() {
     // let vertical = Vec3::new(0.0, viewport_height, 0.0);
     // let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
 
-    let scene: Scene = Scene::CornellSmoke;
+    let scene: Scene = Scene::FinalScene;
     let (world, background, camera) = match scene {
         Scene::Random => {
             let world = random_scene();
@@ -392,6 +452,20 @@ fn main() {
             let vup = Vec3::new(0.0, 1.0, 0.0);
             let dist_to_focus = 10.0;
             let aperture = 0.05;
+            let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, backgournd, camera)
+        }
+        Scene::FinalScene => {
+            let world = final_scene();
+            
+            let backgournd = Color::new(0.0, 0.0, 0.0);
+
+            let lookfrom = Point3::new(478.0, 278.0, -600.0);
+            let lookat = Point3::new(278.0, 278.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.01;
             let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
             (world, backgournd, camera)

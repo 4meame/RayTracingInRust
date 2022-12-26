@@ -22,6 +22,7 @@ fn get_sphere_uv(p: &Vec3) -> (f64, f64) {
     (u, v)
 }
 
+#[derive(Clone)]
 pub struct Sphere<M: Material> {
     center: Point3,
     radius: f64,
@@ -89,6 +90,7 @@ impl<M: Material> Hittable for Sphere<M> {
 
 }
 
+#[derive(Clone)]
 pub struct MovingSphere<M: Material> {
     center0: Point3,
     center1: Point3,
