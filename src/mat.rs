@@ -1,15 +1,28 @@
 use rand::Rng;
-
+use std::f64;
 use super::vec::{Vec3, Color};
 use super::ray::Ray;
 use super::hit::{HitRecord};
 use super::texture::Texture;
 use super::vec::Point3;
+use super::onb::ONB;
 
 pub trait Material: Sync {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)>;
+    // old method
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+        None
+    }
 
-    fn emitted(&self, u: f64, v: f64, p: &Point3) -> Color {
+    //mc method
+    fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray, f64)> {
+        None
+    }
+
+    fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+        0.0
+    }
+
+    fn emitted(&self, rec: &HitRecord) -> Color {
         Color::new(0.0, 0.0, 0.0)
     }
 }
@@ -26,6 +39,8 @@ impl<T: Texture> Lambertian<T> {
             albedo
         }
     }
+
+
 }
 
 impl<T: Texture> Material for Lambertian<T> {
@@ -39,6 +54,30 @@ impl<T: Texture> Material for Lambertian<T> {
         let scattered = Ray::new(rec.position, scatter_direction, _r_in.time());
 
         Some((self.albedo.mapping(rec.u, rec.v, &rec.position), scattered))
+    }
+
+    fn scatter_mc_method(&self, _r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray, f64)> {
+        let uvw = ONB::build_from_w(&rec.normal);
+        let mut scatter_direction = uvw.local(&Vec3::random_cosine_direction());
+        
+        if scatter_direction.near_zero() {
+            // Catch degenerate scatter direction
+            scatter_direction = rec.normal;
+        }
+
+        let scattered = Ray::new(rec.position, scatter_direction, _r_in.time());
+
+        // importance sampling
+        //let pdf = rec.normal.dot(scattered.direction()) / f64::consts::PI;
+        //let pdf = 0.5 / f64::consts::PI;
+        let pdf = uvw.w().dot(scattered.direction()) / f64::consts::PI;
+
+        Some((self.albedo.mapping(rec.u, rec.v, &rec.position), scattered, pdf))
+    }
+
+    fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+        let cosine = rec.normal.dot(scattered.direction().normalized()).max(0.0);
+        cosine / f64::consts::PI
     }
 }
 
@@ -137,8 +176,12 @@ impl<T: Texture> Material for DiffuseLight<T> {
         None
     }
 
-    fn emitted(&self, u: f64, v: f64, p: &Point3) -> Color {
-        self.emit.mapping(u, v, p)
+    fn emitted(&self, rec: &HitRecord) -> Color {
+        if rec.front_face {
+            self.emit.mapping(rec.u, rec.v, &rec.position)
+        } else {
+            Color::new(0.0, 0.0, 0.0)
+        }
     }
 }
 

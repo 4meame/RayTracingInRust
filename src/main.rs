@@ -13,6 +13,8 @@ mod bvh;
 mod perlin;
 mod texture;
 mod medium;
+mod onb;
+mod pdf;
 
 use std::{io::{stderr, Write}};
 use rand::Rng;
@@ -21,7 +23,7 @@ use vec::{Vec3, Point3, Color};
 use ray::Ray;
 use translate::Translate;
 use rotate::{Axis, Rotate};
-use hit::{Hittable, HittableList};
+use hit::{Hittable, HittableList, FlipNormal};
 use sphere::{Sphere, MovingSphere};
 use rect::{Plane, AARect};
 use cube::Cube;
@@ -50,10 +52,30 @@ fn ray_color(ray: &Ray, color: Color, world: &Box<dyn Hittable>, depth: u64) -> 
         // let r = Ray::new(rec.position, target - rec.position);
         // 0.5 * ray_color(&r, world, depth - 1)
 
-        let emitted: Color = rec.material.emitted(rec.u, rec.v, &rec.position);
+        let emitted: Color = rec.material.emitted(&rec);
 
-        if let Some((attenuation, scattered)) = rec.material.scatter(ray, &rec) {
-            emitted + attenuation * ray_color(&scattered, color, world, depth - 1)
+        let on_light = Point3::new(255.0, 554.0, 277.0);
+        let mut to_light = on_light - rec.position;
+        let distance_squared = to_light.length().powi(2);
+        to_light = to_light.normalized();
+
+        if to_light.dot(rec.normal) < 0.0 {
+            return emitted
+        }
+
+        let light_area = (343.0 - 213.0) * (332.0 - 227.0);
+        let light_cosine = f64::abs(to_light.y());
+        if light_cosine < 0.000001 {
+            return emitted
+        }
+
+        // old method
+        // if let Some((attenuation, scattered)) = rec.material.scatter(ray, &rec) {
+        //     emitted + attenuation * ray_color(&scattered, color, world, depth - 1)
+        if let Some((attenuation, mut scattered, mut pdf)) = rec.material.scatter_mc_method(ray, &rec) {
+            pdf = distance_squared / (light_cosine * light_area);
+            scattered = Ray::new(rec.position, to_light, ray.time());
+            emitted + attenuation *  rec.material.scattering_pdf(ray, &rec, &scattered) * ray_color(&scattered, color, world, depth - 1) / pdf
         } else {
             emitted
         }
@@ -194,7 +216,7 @@ fn cornell_box() -> Box<dyn Hittable> {
 
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, green));
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, red));
-    world.push(AARect::new(Plane::XZ, 213.0, 343.0, 227.0, 332.0, 554.0, light));
+    world.push(FlipNormal::new(AARect::new(Plane::XZ, 213.0, 343.0, 227.0, 332.0, 554.0, light)));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
     world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
@@ -202,7 +224,7 @@ fn cornell_box() -> Box<dyn Hittable> {
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 165.0, 165.0), dielectric),-18.0), Vec3::new(130.0, 0.0, 65.0)));
+                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 165.0, 165.0), white.clone()),-18.0), Vec3::new(130.0, 0.0, 65.0)));
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
@@ -313,10 +335,10 @@ enum Scene {
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 1.0;
-    const IMAGE_WIDTH: u64 = 800;
+    const IMAGE_WIDTH: u64 = 500;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 10000;
-    const MAX_DEPTH: u64 = 500;
+    const SAMPLES_PER_PIXEL: u64 = 10;
+    const MAX_DEPTH: u64 = 12;
 
     // world
     // let mut world = World::new();
@@ -356,7 +378,7 @@ fn main() {
     // let vertical = Vec3::new(0.0, viewport_height, 0.0);
     // let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
 
-    let scene: Scene = Scene::FinalScene;
+    let scene: Scene = Scene::CornellBox;
     let (world, background, camera) = match scene {
         Scene::Random => {
             let world = random_scene();
