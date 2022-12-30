@@ -1,10 +1,12 @@
 use std::f64;
+use rand::Rng;
 use super::vec::{Vec3, Point3};
 use super::ray::Ray;
 use super::hit::{Hittable, HitRecord};
 use super::mat::Material;
 use super::aabb;
 use super::aabb::AABB;
+use super::onb::ONB;
 
 fn get_sphere_uv(p: &Vec3) -> (f64, f64) {
     // p: a given point on the sphere of radius one, centered at the origin.
@@ -20,6 +22,17 @@ fn get_sphere_uv(p: &Vec3) -> (f64, f64) {
     let v = theta / f64::consts::PI;
 
     (u, v)
+}
+
+fn random_to_sphere(radius: f64, distance_squared: f64) -> Vec3 {
+    let mut rng = rand::thread_rng();
+    let r1 = rng.gen::<f64>();
+    let r2 = rng.gen::<f64>();
+    let z = 1.0 + r2 * ((1.0 - radius.powi(2) / distance_squared).sqrt() - 1.0);
+    let phi = 2.0 * f64::consts::PI * r1;
+    let x = phi.cos() * (1.0 - z.powi(2)).sqrt();
+    let y = phi.sin() * (1.0 - z.powi(2)).sqrt();
+    Vec3::new(x, y, z)
 }
 
 #[derive(Clone)]
@@ -88,6 +101,22 @@ impl<M: Material> Hittable for Sphere<M> {
         Some(AABB{min, max})
     }
 
+    fn pdf_value(&self, o: Point3, v: Vec3) -> f64 {
+        if let Some(_hit) = self.hit(&Ray::new(o, v, 0.0), 0.001, f64::MAX) {
+            let cos_theta_max = (1.0 - self.radius.powi(2) / (self.center - o).length().powi(2)).sqrt();
+            let solid_angle = 2.0 * f64::consts::PI * (1.0 - cos_theta_max);
+            1.0 / solid_angle
+        } else {
+            0.0
+        }
+    }
+
+    fn random(&self, o: Vec3) -> Vec3 {
+        let direction = self.center - o;
+        let distance_squared = direction.length().powi(2);
+        let uvw = ONB::build_from_w(&direction);
+        uvw.local(&random_to_sphere(self.radius, distance_squared))
+    }
 }
 
 #[derive(Clone)]

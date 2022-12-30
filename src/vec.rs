@@ -94,18 +94,6 @@ impl Vec3 {
         }
     }
 
-    pub fn random_cosine_direction() -> Vec3 {
-        let mut rng = rand::thread_rng();
-        let r1 = rng.gen::<f64>();
-        let r2 = rng.gen::<f64>();
-        let z = (1.0 - r2).sqrt();
-        let phi = 2.0 * f64::consts::PI * r1;
-        let x= f64::cos(phi) * r2.sqrt();
-        let y = f64::sin(phi) * r2.sqrt();
-    
-        Vec3::new(x, y, z)
-    }
-
     pub fn near_zero(self) -> bool {
         const EPS: f64 = 1.0e-8;
         self[0].abs() < EPS && self[1].abs() < EPS && self[2].abs() < EPS
@@ -124,7 +112,7 @@ impl Vec3 {
 
     // color utility functions
 
-    pub fn format_color(self, samples_per_pixel: u64) -> String {
+    pub fn format_color(self, samples_per_pixel: u64) -> String {     
         let ir = (256.0 * (self[0] / (samples_per_pixel as f64)).sqrt().clamp(0.0, 0.999)) as u64;
         let ig = (256.0 * (self[1] / (samples_per_pixel as f64)).sqrt().clamp(0.0, 0.999)) as u64;
         let ib = (256.0 * (self[2] / (samples_per_pixel as f64)).sqrt().clamp(0.0, 0.999)) as u64;

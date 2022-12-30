@@ -4,8 +4,7 @@ use super::vec::{Vec3, Color};
 use super::ray::Ray;
 use super::hit::{HitRecord};
 use super::texture::Texture;
-use super::vec::Point3;
-use super::onb::ONB;
+use super::pdf::PDF;
 
 pub trait Material: Sync {
     // old method
@@ -14,7 +13,7 @@ pub trait Material: Sync {
     }
 
     //mc method
-    fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray, f64)> {
+    fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
         None
     }
 
@@ -27,6 +26,10 @@ pub trait Material: Sync {
     }
 }
 
+pub enum ScatterRecord<'a> {
+    Specular { specular_ray: Ray, attenuation: Color },
+    Scatter { pdf: PDF<'a>, attenuation: Color }
+}
 
 #[derive(Clone)]
 pub struct Lambertian<T: Texture> {
@@ -39,8 +42,6 @@ impl<T: Texture> Lambertian<T> {
             albedo
         }
     }
-
-
 }
 
 impl<T: Texture> Material for Lambertian<T> {
@@ -56,23 +57,25 @@ impl<T: Texture> Material for Lambertian<T> {
         Some((self.albedo.mapping(rec.u, rec.v, &rec.position), scattered))
     }
 
-    fn scatter_mc_method(&self, _r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray, f64)> {
-        let uvw = ONB::build_from_w(&rec.normal);
-        let mut scatter_direction = uvw.local(&Vec3::random_cosine_direction());
+    fn scatter_mc_method(&self, _r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
+        // let mut scatter_direction = rec.normal + Vec3::random_in_unit_sphere();
         
-        if scatter_direction.near_zero() {
-            // Catch degenerate scatter direction
-            scatter_direction = rec.normal;
-        }
+        // if scatter_direction.near_zero() {
+        //     // catch degenerate scatter direction
+        //     scatter_direction = rec.normal;
+        // }
 
-        let scattered = Ray::new(rec.position, scatter_direction, _r_in.time());
+        // let scattered = Ray::new(rec.position, scatter_direction, _r_in.time());
 
-        // importance sampling
-        //let pdf = rec.normal.dot(scattered.direction()) / f64::consts::PI;
-        //let pdf = 0.5 / f64::consts::PI;
-        let pdf = uvw.w().dot(scattered.direction()) / f64::consts::PI;
+        // // importance sampling
+        // let pdf = rec.normal.dot(scattered.direction()) / f64::consts::PI;
 
-        Some((self.albedo.mapping(rec.u, rec.v, &rec.position), scattered, pdf))
+        let rec = ScatterRecord::Scatter { 
+            pdf: PDF::cosine_pdf(rec.normal),
+            attenuation: self.albedo.mapping(rec.u, rec.v, &rec.position)
+        };
+
+        Some(rec)
     }
 
     fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
@@ -104,6 +107,21 @@ impl Material for Metal {
 
         if scattered.direction().dot(rec.normal) > 0.0 {
             Some((self.albedo, scattered))
+        } else {
+            None
+        }
+    }
+
+    fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
+        let reflected = r_in.direction().reflect(rec.normal).normalized();
+        let scattered = Ray::new(rec.position, reflected + self.fuzz * Vec3::random_in_unit_sphere(), r_in.time());
+
+        if scattered.direction().dot(rec.normal) > 0.0 {
+            let rec = ScatterRecord::Specular { 
+                specular_ray: scattered,
+                attenuation: self.albedo
+            };
+            Some(rec)
         } else {
             None
         }
@@ -155,6 +173,39 @@ impl Material for Dielectric {
 
         let scattered = Ray::new(rec.position, direction, r_in.time());
         Some((Color::new(1.0, 1.0, 1.0), scattered))
+    }
+
+    fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
+        let attenuation = Color::new(1.0, 1.0, 1.0);
+        let refraction_ratio = if rec.front_face {
+            1.0 / self.ir
+        } else {
+            self.ir
+        };
+
+        let unit_direction = r_in.direction().normalized();
+        
+        let cos_theta = ((-1.0) * unit_direction).dot(rec.normal).min(1.0);
+        let sin_theta = (1.0 - cos_theta.powi(2)).sqrt();
+
+        let mut rng = rand::thread_rng();
+        let cannot_refract = refraction_ratio * sin_theta > 1.0;
+        let will_reflect = rng.gen::<f64>() < Self::reflectance(cos_theta, refraction_ratio);
+
+        let direction = if cannot_refract || will_reflect {
+            unit_direction.reflect(rec.normal)
+        } else {
+            unit_direction.refract(rec.normal, refraction_ratio)
+        };
+
+        let scattered = Ray::new(rec.position, direction, r_in.time());
+
+        let rec = ScatterRecord::Specular { 
+            specular_ray: scattered,
+            attenuation
+        };
+
+        Some(rec)
     }
 }
 
