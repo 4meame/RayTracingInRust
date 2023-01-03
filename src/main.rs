@@ -6,6 +6,7 @@ mod hit;
 mod sphere;
 mod rect;
 mod cube;
+mod tri;
 mod camera;
 mod mat;
 mod aabb;
@@ -27,6 +28,7 @@ use hit::{Hittable, HittableList, FlipNormal};
 use sphere::{Sphere, MovingSphere};
 use rect::{Plane, AARect};
 use cube::Cube;
+use tri::Triangle;
 use camera::Camera;
 use mat::{Lambertian, Metal, Dielectric, DiffuseLight, ScatterRecord};
 use bvh::BVH;
@@ -301,6 +303,42 @@ fn cornell_box_with_smoke() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     (Box::new(world), Box::new(lights))
 }
 
+fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
+    let mut world = HittableList::default();
+    let mut lights = HittableList::default();
+
+    let white = Lambertian::new(ConstantTexture::new(Color::new(0.73, 0.73, 0.73)));
+    let red = Lambertian::new(ConstantTexture::new(Color::new(0.65, 0.05, 0.05)));
+    let green = Lambertian::new(ConstantTexture::new(Color::new(0.12, 0.45, 0.15)));
+    let tomato = Lambertian::new(ConstantTexture::new(Color::new(1.0, 0.39, 0.28)));
+    let violet = Lambertian::new(ConstantTexture::new(Color::new(0.93, 0.51, 0.93)));
+    let turquoise = Lambertian::new(ConstantTexture::new(Color::new(0.25, 0.88, 0.82)));
+    let azure = Lambertian::new(ConstantTexture::new(Color::new(0.94, 1.0, 1.0)));
+    let dielectric = Dielectric::new(1.5);
+    let metal = Metal::new(Color::new(0.8, 0.85, 0.88), 0.04);
+    let light = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 2.0));
+
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, violet));
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, tomato));
+    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
+    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+    world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+
+    let rect_light = FlipNormal::new(AARect::new(Plane::XZ, 100.0, 455.0, 100.0, 455.0, 554.0, light));
+    let spehre0 = Sphere::new(Point3::new(488.0, 455.0, 368.0), 49.0, dielectric);
+    let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
+    let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 555.0), Vec3::new(278.0, 555.0, 555.0)], metal);
+    
+    world.push(rect_light.clone());
+    world.push(spehre0);
+    world.push(Translate::new(Rotate::new(Axis::Y, cube0, 30.0), Vec3::new(278.0, 0.0, 278.0)));
+    world.push(tri0);
+    
+    lights.push(rect_light);
+
+    (Box::new(world), Box::new(lights))
+}
+
 fn final_scene() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let mut world = HittableList::default();
     let mut lights = HittableList::default();
@@ -371,16 +409,17 @@ enum Scene {
     LightRoom,
     CornellBox,
     CornellSmoke,
+    CornellTest,
     FinalScene
 }
 
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 1.0;
-    const IMAGE_WIDTH: u64 = 500;
+    const IMAGE_WIDTH: u64 = 800;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
     const SAMPLES_PER_PIXEL: u64 = 1000;
-    const MAX_DEPTH: u64 = 16;
+    const MAX_DEPTH: u64 = 50;
 
     // world
     // let mut world = World::new();
@@ -420,7 +459,7 @@ fn main() {
     // let vertical = Vec3::new(0.0, viewport_height, 0.0);
     // let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
 
-    let scene: Scene = Scene::CornellBox;
+    let scene: Scene = Scene::CornellTest;
     let (world, background, lights, camera) = match scene {
         Scene::Random => {
             let (world, lights) = random_scene();
@@ -505,7 +544,7 @@ fn main() {
             let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
             (world, backgournd, lights, camera)
-        },
+        }
         Scene::CornellSmoke => {
             let (world, lights) = cornell_box_with_smoke();
             
@@ -516,6 +555,20 @@ fn main() {
             let vup = Vec3::new(0.0, 1.0, 0.0);
             let dist_to_focus = 10.0;
             let aperture = 0.05;
+            let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, backgournd, lights, camera)
+        }
+        Scene::CornellTest => {
+            let (world, lights) = cornell_test();
+            
+            let backgournd = Color::new(0.0, 0.0, 0.0);
+
+            let lookfrom = Point3::new(278.0, 278.0, -800.0);
+            let lookat = Point3::new(278.0, 278.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let aperture = 0.01;
             let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
             (world, backgournd, lights, camera)

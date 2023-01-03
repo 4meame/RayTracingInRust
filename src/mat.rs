@@ -12,7 +12,7 @@ pub trait Material: Sync {
         None
     }
 
-    //mc method
+    // mc method
     fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
         None
     }
