@@ -315,7 +315,7 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let turquoise = Lambertian::new(ConstantTexture::new(Color::new(0.25, 0.88, 0.82)));
     let azure = Lambertian::new(ConstantTexture::new(Color::new(0.94, 1.0, 1.0)));
     let dielectric = Dielectric::new(1.5);
-    let metal = Metal::new(Color::new(0.8, 0.85, 0.88), 0.04);
+    let metal = Metal::new(Color::new(0.8, 0.85, 0.88), 0.02);
     let light = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 2.0));
 
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, violet));
@@ -327,7 +327,7 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let rect_light = FlipNormal::new(AARect::new(Plane::XZ, 100.0, 455.0, 100.0, 455.0, 554.0, light));
     let spehre0 = Sphere::new(Point3::new(488.0, 455.0, 368.0), 49.0, dielectric);
     let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
-    let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 555.0), Vec3::new(278.0, 555.0, 555.0)], metal);
+    let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);
     
     world.push(rect_light.clone());
     world.push(spehre0);
