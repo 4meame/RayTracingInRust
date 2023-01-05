@@ -15,7 +15,7 @@ impl Mesh {
     pub fn new<M: Material + Copy + Clone + 'static>(positions: Vec<Vec3>, indices: Vec<u32>, material: M) -> Mesh {
         let mut tris = HittableList::default();
 
-        for i in 0..positions.len() / 3 {
+        for i in 0..indices.len() / 3 {
             let vertices = [
                 positions[indices[i * 3] as usize],
                 positions[indices[i * 3 + 1] as usize],
