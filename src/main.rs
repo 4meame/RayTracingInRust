@@ -7,6 +7,7 @@ mod sphere;
 mod rect;
 mod cube;
 mod tri;
+mod mesh;
 mod camera;
 mod mat;
 mod aabb;
@@ -29,6 +30,7 @@ use sphere::{Sphere, MovingSphere};
 use rect::{Plane, AARect};
 use cube::Cube;
 use tri::Triangle;
+use mesh::Mesh;
 use camera::Camera;
 use mat::{Lambertian, Metal, Dielectric, DiffuseLight, ScatterRecord};
 use bvh::BVH;
@@ -329,11 +331,15 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
     let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);
     
+    let obj = Mesh::load_obj("teapot.obj", Vec3::new(208.0, 55.0, 208.0), 1.0, turquoise).unwrap();
+
     world.push(rect_light.clone());
     world.push(spehre0);
     world.push(Translate::new(Rotate::new(Axis::Y, cube0, 30.0), Vec3::new(278.0, 0.0, 278.0)));
     world.push(tri0);
     
+    world.push(obj);
+
     lights.push(rect_light);
 
     (Box::new(world), Box::new(lights))
@@ -416,9 +422,9 @@ enum Scene {
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 1.0;
-    const IMAGE_WIDTH: u64 = 800;
+    const IMAGE_WIDTH: u64 = 200;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 1000;
+    const SAMPLES_PER_PIXEL: u64 = 20;
     const MAX_DEPTH: u64 = 50;
 
     // world

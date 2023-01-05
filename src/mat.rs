@@ -31,7 +31,7 @@ pub enum ScatterRecord<'a> {
     Scatter { pdf: PDF<'a>, attenuation: Color }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Lambertian<T: Texture> {
     albedo: T
 }
@@ -85,7 +85,7 @@ impl<T: Texture> Material for Lambertian<T> {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Metal {
     albedo: Color,
     fuzz: f64
@@ -129,7 +129,7 @@ impl Material for Metal {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Dielectric {
     ir: f64
 }
@@ -209,7 +209,7 @@ impl Material for Dielectric {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct DiffuseLight<T: Texture> {
     emit: T
 }
@@ -236,7 +236,7 @@ impl<T: Texture> Material for DiffuseLight<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Isotropic<T: Texture> {
     albedo: T
 }

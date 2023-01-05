@@ -7,7 +7,7 @@ pub trait Texture: Sync {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct ConstantTexture {
     value: Color
 }
@@ -27,7 +27,7 @@ impl Texture for ConstantTexture {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct CheckTexture<T: Texture, U: Texture> {
     odd: T,
     even: U

@@ -5,6 +5,7 @@ use super::hit::{Hittable, HitRecord};
 use super::mat::Material;
 use super::aabb::AABB;
 
+#[derive(Clone)]
 pub struct Triangle<M: Material> {
     vertices: [Point3; 3],
     material: M
