@@ -46,6 +46,8 @@ fn ray_color(ray: &Ray, background: Color, world: &Box<dyn Hittable>, lights: &B
 
     // 0.001 t_min fixs shadow acne
     if let Some(rec) = world.hit(ray, 0.00001, f64::INFINITY) {
+        // Color::new(1.0, 0.0, 0.0)
+
         // 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0))
 
         // Lambertian:
@@ -94,11 +96,42 @@ fn ray_color(ray: &Ray, background: Color, world: &Box<dyn Hittable>, lights: &B
                     let pdf_value = mixture_pdf.value(scattered.direction());
                     return emitted + attenuation *  rec.material.scattering_pdf(ray, &rec, &scattered) * ray_color(&scattered, background, world, lights, depth - 1) / pdf_value
                 }
-            }
+           }
 
         } else {
             emitted
         }
+
+    } else {
+    // let unit_direction = ray.direction().normalized();
+    // let t = 0.5 * (unit_direction.y() + 1.0);
+
+    // //lerp white and blue with direction of y
+    // (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0);
+    background
+    }
+}
+
+fn progress_ray_color(ray: &Ray, background: Color, world: &Box<dyn Hittable>, depth: u64) -> Color {
+    if depth <= 0 {
+        // if we've exceeded the ray bounce limit, no more light is gathered
+        return Color::new(0.0, 0.0, 0.0)
+    }
+
+    // 0.001 t_min fixs shadow acne
+    if let Some(rec) = world.hit(ray, 0.00001, f64::INFINITY) {
+        // Color::new(1.0, 0.0, 0.0)
+
+        // 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0))
+
+        // Lambertian:
+        let target = rec.position + rec.normal + Vec3::random_in_unit_sphere().normalized();
+        
+        // Hemispherical scattering:
+        // let target = rec.position + Vec3::random_in_hemisphere(rec.normal);
+
+        let r = Ray::new(rec.position, target - rec.position, 1.0);
+        0.5 * progress_ray_color(&r, background, world, depth - 1)
 
     } else {
     // let unit_direction = ray.direction().normalized();
@@ -405,6 +438,55 @@ fn final_scene() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     (Box::new(world), Box::new(lights))
 }
 
+pub fn progress_showcase() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
+    let mut world = HittableList::default();
+    let mut lights = HittableList::default();
+
+    // let ground_mat = Lambertian::new(CheckTexture::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), ConstantTexture::new(Color::new(0.04, 0.01, 0.02))));
+    // let ground_sphere = Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground_mat);
+
+    // let white = Lambertian::new(ConstantTexture::new(Color::new(0.73, 0.73, 0.73)));
+    // let green = Lambertian::new(ConstantTexture::new(Color::new(0.12, 0.45, 0.15)));
+    // let tomato = Lambertian::new(ConstantTexture::new(Color::new(1.0, 0.39, 0.28)));
+    // let violet = Lambertian::new(ConstantTexture::new(Color::new(0.93, 0.51, 0.93)));
+    // let red = Lambertian::new(ConstantTexture::new(Color::new(0.65, 0.05, 0.05)));
+    // let azure = Lambertian::new(ConstantTexture::new(Color::new(0.94, 1.0, 1.0)));
+    // let dielectric = Dielectric::new(1.5);
+    // let metal = Metal::new(Color::new(0.8, 0.85, 0.88), 0.0);
+    // let glossy = Metal::new(Color::new(1.0, 0.4, 0.0), 0.3);
+    // let light = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 25.0));
+
+    // let sphere_0 = Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, green);
+    // let sphere_1 = Sphere::new(Vec3::new(-1.7, 1.0, 1.7), 1.0, metal);
+    // let sphere_2 = Sphere::new(Vec3::new(1.7, 1.0, -1.7), 1.0, violet);
+    // let sphere_3 = Sphere::new(Vec3::new(3.7, 0.0, 5.4), 3.4, dielectric);
+    // let sphere_4 = Sphere::new(Vec3::new(3.7, 0.0, 5.4), -3.3, dielectric);
+    // let sphere_5 = Sphere::new(Vec3::new(-3.3, 2.4, -2.9), 0.3, light);
+    // let sphere_6 = Sphere::new(Vec3::new(-1.2, 0.4, -1.8), 0.5, glossy);
+
+    // let plane_0 = AARect::new(Plane::YZ, 0.0, 0.7, 0.1, 0.3, 0.0, tomato);
+
+    // let triangle = Triangle::new([Vec3::new(-2.4, 3.3, 4.6), Vec3::new(-3.2, 1.3, 2.1), Vec3::new(-0.8, 1.5, 3.4)], red);
+
+    // world.push(sphere_0);
+    // world.push(sphere_1);
+    // world.push(sphere_2);
+    // world.push(ground_sphere);
+    // world.push(Translate::new(Rotate::new(Axis::Y, plane_0, 104.0), Vec3::new(0.5, 1.9, 1.7)));
+    // world.push(triangle);
+    // world.push(sphere_3);
+    // world.push(sphere_4);
+    // world.push(sphere_5);
+    // world.push(sphere_6);
+
+    // // let boundary = Sphere::new(Point3::new(0.0, 0.0, 0.0), 5000.0, Dielectric::new(1.5));
+    // // world.push(ConstantMedium::new(boundary, 0.0001, ConstantTexture::new(Color::new(1.0, 1.0, 1.0))));
+
+    // lights.push(sphere_5);
+
+    (Box::new(world), Box::new(lights))
+}
+
 enum Scene {
     Random,
     TwoSphere,
@@ -414,7 +496,8 @@ enum Scene {
     CornellBox,
     CornellSmoke,
     CornellTest,
-    FinalScene
+    FinalScene,
+    Progress
 }
 
 fn main() {
@@ -466,7 +549,7 @@ fn main() {
     let scene: Scene = Scene::CornellTest;
     let (world, background, lights, camera) = match scene {
         Scene::Random => {
-            let (world, lights) = random_scene();
+            let (world, lights) = final_scene();
 
             let backgournd = Color::new(0.7, 0.8, 1.0);
 
@@ -591,6 +674,20 @@ fn main() {
 
             (world, backgournd, lights, camera)
         }
+        Scene::Progress => {
+            let (world, lights) = progress_showcase();
+
+            let backgournd = Color::new(0.0, 0.0, 0.0);
+
+            let lookfrom = Point3::new(-3.3, 6.8, -9.8);
+            let lookat = Point3::new(0.0, 1.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 12.0;
+            let aperture = 0.2;
+            let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+
+            (world, backgournd, lights, camera)
+        }
     };
 
     println!("P3");
@@ -654,6 +751,7 @@ fn main() {
                 // let backgournd = (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0);
 
                 ray_color(&r, background, &world, &lights, MAX_DEPTH)
+                // progress_ray_color(&r, background, &world, MAX_DEPTH)
             })
             .sum();
             
