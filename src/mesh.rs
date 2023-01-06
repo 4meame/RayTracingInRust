@@ -8,7 +8,8 @@ use super::aabb::AABB;
 use super::tri::Triangle;
 
 pub struct Mesh {
-    tris: HittableList
+    // sharing data to calcualte BVH
+    pub tris: HittableList
 }
 
 impl Mesh {

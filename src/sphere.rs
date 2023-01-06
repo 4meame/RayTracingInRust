@@ -35,7 +35,7 @@ fn random_to_sphere(radius: f64, distance_squared: f64) -> Vec3 {
     Vec3::new(x, y, z)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Sphere<M: Material> {
     center: Point3,
     radius: f64,

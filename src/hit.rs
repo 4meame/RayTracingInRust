@@ -46,7 +46,7 @@ impl HitRecord<'_> {
 
 #[derive(Default)]
 pub struct HittableList {
-    list: Vec<Box<dyn Hittable>>
+    pub list: Vec<Box<dyn Hittable>>
 }
 
 impl HittableList {
@@ -96,7 +96,7 @@ impl Hittable for HittableList {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct FlipNormal<H: Hittable> {
     hittable: H
 }

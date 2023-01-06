@@ -322,23 +322,21 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
 
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, violet));
     world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, tomato));
-    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
-    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
-    world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white));
+    world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white));
+    world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white));
 
-    let rect_light = FlipNormal::new(AARect::new(Plane::XZ, 100.0, 455.0, 100.0, 455.0, 554.0, light));
+    let rect_light = FlipNormal::new(AARect::new(Plane::XZ, 100.0, 455.0, 20.0, 385.0, 554.0, light));
     let spehre0 = Sphere::new(Point3::new(488.0, 455.0, 368.0), 49.0, dielectric);
     let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
-    let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);
-    
-    let obj = Mesh::load_obj("teapot.obj", Vec3::new(208.0, 55.0, 208.0), 1.0, turquoise).unwrap();
+    let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);   
+    let obj = Mesh::load_obj("Venus.obj", Vec3::new(146.0, 10.0, 208.0), 0.2, turquoise).unwrap();
 
     world.push(rect_light.clone());
     world.push(spehre0);
-    world.push(Translate::new(Rotate::new(Axis::Y, cube0, 30.0), Vec3::new(278.0, 0.0, 278.0)));
-    world.push(tri0);
-    
-    world.push(obj);
+    world.push(Translate::new(Rotate::new(Axis::Y, cube0, 30.0), Vec3::new(278.0, 0.0, 156.0)));
+    world.push(tri0);  
+    world.push(BVH::new(obj.tris.list, 0.0, 1.0));
 
     lights.push(rect_light);
 
@@ -422,9 +420,9 @@ enum Scene {
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 1.0;
-    const IMAGE_WIDTH: u64 = 200;
+    const IMAGE_WIDTH: u64 = 1000;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 20;
+    const SAMPLES_PER_PIXEL: u64 = 1000;
     const MAX_DEPTH: u64 = 50;
 
     // world
