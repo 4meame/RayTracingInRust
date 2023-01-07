@@ -390,11 +390,11 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let light0 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 4.8));
     let light1 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.91, 0.99) * 1.5));
     let light2 = DiffuseLight::new(ConstantTexture::new(Color::new(0.88, 0.91, 0.99) * 1.3));
-    let light3 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.613, 0.604) * 3.2));
+    let light3 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.613, 0.604) * 25.2));
     let light4 = DiffuseLight::new(ConstantTexture::new(Color::new(0.841, 0.813, 0.974) * 58.9));
 
-    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, color_e60307));
-    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, color_80cf00));
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, perano));
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, diamond));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white));
     world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white));
@@ -408,9 +408,9 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let spehre0 = Sphere::new(Point3::new(488.0, 455.0, 368.0), 49.0, dielectric);
     let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
     let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);   
-    let obj = Mesh::load_obj("lart et la nature ou la.obj", Vec3::new(298.0, 185.0, 248.0), 7.0, color_cfb386).unwrap();
+    let obj = Mesh::load_obj("baccante.obj", Vec3::new(278.0, 40.0, 258.0), 15.0, apricot_peach).unwrap();
 
-    world.push(rect_light0.clone());
+    //world.push(rect_light0.clone());
     //world.push(rect_light1.clone());
     //world.push(rect_light2.clone());
     world.push(rect_light3.clone());
@@ -421,7 +421,7 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     //world.push(tri0);  
     world.push(BVH::new(obj.tris.list, 0.0, 1.0));
 
-    lights.push(rect_light0);
+    //lights.push(rect_light0);
     //lights.push(rect_light1);
     //lights.push(rect_light2);
     lights.push(rect_light3);
