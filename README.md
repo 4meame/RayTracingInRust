@@ -6,3 +6,6 @@ Implemented by Rust.
 ![Image text](img/CornellBox.png)  
 ![Image text](img/volume.png)  
 ![Image text](img/final.png)  
+![Image text](img/b.png)  
+![Image text](img/i(1).png)  
+![Image text](img/g.png)  
