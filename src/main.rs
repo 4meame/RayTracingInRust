@@ -288,15 +288,15 @@ fn cornell_box() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
     world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
 
-    world.push(Sphere::new(Point3::new(190.0, 90.0, 190.0), 90.0, dielectric));
-    // world.push(
-    //     Translate::new(
-    //         Rotate::new(Axis::Y,
-    //                     Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 165.0, 165.0), white),-18.0), Vec3::new(130.0, 0.0, 65.0)));
+    //world.push(Sphere::new(Point3::new(190.0, 90.0, 190.0), 90.0, dielectric));
     world.push(
         Translate::new(
             Rotate::new(Axis::Y,
-                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 330.0, 165.0), white),15.0), Vec3::new(265.0, 0.0, 295.0)));
+                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 165.0, 165.0), white),-18.0), Vec3::new(130.0, 0.0, 65.0)));
+    world.push(
+        Translate::new(
+            Rotate::new(Axis::Y,
+                        Cube::new(Point3::new(0.0, 0.0, 0.0), Point3::new(165.0, 330.0, 165.0), metal),15.0), Vec3::new(265.0, 0.0, 295.0)));
 
     lights.push(rect_light);
 
@@ -342,36 +342,90 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let mut world = HittableList::default();
     let mut lights = HittableList::default();
 
+    let black = Lambertian::new(ConstantTexture::new(Color::new(0.00, 0.00, 0.00)));
     let white = Lambertian::new(ConstantTexture::new(Color::new(0.73, 0.73, 0.73)));
     let red = Lambertian::new(ConstantTexture::new(Color::new(0.65, 0.05, 0.05)));
     let green = Lambertian::new(ConstantTexture::new(Color::new(0.12, 0.45, 0.15)));
+    let blue = Lambertian::new(ConstantTexture::new(Color::new(0.051, 0.459, 1.000)));
     let tomato = Lambertian::new(ConstantTexture::new(Color::new(1.0, 0.39, 0.28)));
     let violet = Lambertian::new(ConstantTexture::new(Color::new(0.93, 0.51, 0.93)));
     let turquoise = Lambertian::new(ConstantTexture::new(Color::new(0.25, 0.88, 0.82)));
     let azure = Lambertian::new(ConstantTexture::new(Color::new(0.94, 1.0, 1.0)));
-    let dielectric = Dielectric::new(1.5);
-    let metal = Metal::new(Color::new(0.8, 0.85, 0.88), 0.02);
-    let light = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 2.0));
+    let light_mauve = Lambertian::new(ConstantTexture::new(Color::new(0.569, 0.380, 0.949)));
+    let neutral_gray = Lambertian::new(ConstantTexture::new(Color::new(0.701, 0.820, 0.800)));
+    let cinnamon_buff = Lambertian::new(ConstantTexture::new(Color::new(1.000, 0.749, 0.431)));
+    let jasper_red = Lambertian::new(ConstantTexture::new(Color::new(0.980, 0.168, 0.000)));
+    let olympic_blue = Lambertian::new(ConstantTexture::new(Color::new(0.310, 0.560, 0.901)));
+    let seashell_pink = Lambertian::new(ConstantTexture::new(Color::new(1.000, 0.811, 0.768)));
+    let benzol_green = Lambertian::new(ConstantTexture::new(Color::new(0.000, 0.850, 0.451)));
+    let spinel_red= Lambertian::new(ConstantTexture::new(Color::new(1.000, 0.302, 0.788)));
+    let venice_green = Lambertian::new(ConstantTexture::new(Color::new(0.419, 1.000, 0.702)));
+    let nile_blue = Lambertian::new(ConstantTexture::new(Color::new(0.749, 1.000, 0.902)));
+    let deep_slate_olive = Lambertian::new(ConstantTexture::new(Color::new(0.090, 0.153, 0.074)));
+    let lemon_yellow= Lambertian::new(ConstantTexture::new(Color::new(0.894, 0.941, 0.141)));
+    let cotinga_purple = Lambertian::new(ConstantTexture::new(Color::new(0.204, 0.000, 0.349)));
+    let helvetia_blue = Lambertian::new(ConstantTexture::new(Color::new(0.000, 0.341, 0.729)));
+    let citron_yellow = Lambertian::new(ConstantTexture::new(Color::new(0.650, 0.831, 0.051)));
+    let hermosa_pink = Lambertian::new(ConstantTexture::new(Color::new(1.000, 0.702, 0.941)));
+    let grayish_lavender= Lambertian::new(ConstantTexture::new(Color::new(0.749, 0.780, 0.800)));
+    let carmine = Lambertian::new(ConstantTexture::new(Color::new(0.839, 0.000, 0.212)));
+    let deep_slate_green = Lambertian::new(ConstantTexture::new(Color::new(0.059, 0.149, 0.122)));
+    let coral_red = Lambertian::new(ConstantTexture::new(Color::new(1.000, 0.451, 0.600)));
+    let apricot_peach = Lambertian::new(ConstantTexture::new(Color::new(0.981, 0.811, 0.690)));
+    let perano = Lambertian::new(ConstantTexture::new(Color::new(0.663, 0.750, 0.951)));
+    let diamond = Lambertian::new(ConstantTexture::new(Color::new(0.732, 0.953, 1.000)));
+    let dust_storm = Lambertian::new(ConstantTexture::new(Color::new(0.901, 0.804, 0.788)));
+    let bone = Lambertian::new(ConstantTexture::new(Color::new(0.887, 0.851, 0.794)));
+    let desire = Lambertian::new(ConstantTexture::new(Color::new(0.922, 0.238, 0.331)));
+    let botticelli = Lambertian::new(ConstantTexture::new(Color::new(0.782, 0.873, 0.904)));
+    let safety_orange = Lambertian::new(ConstantTexture::new(Color::new(1.000, 0.471, 0.0)));
+    let han_purple = Lambertian::new(ConstantTexture::new(Color::new(0.318, 0.090, 0.979)));
+    let soft_peach = Lambertian::new(ConstantTexture::new(Color::new(0.961, 0.933, 0.939)));
+    let color_e60307 = Lambertian::new(ConstantTexture::new(Color::new(0.902, 0.012, 0.027)));
+    let color_80cf00 = Lambertian::new(ConstantTexture::new(Color::new(0.502, 0.812, 0.002)));
+    let color_cfb386 = Lambertian::new(ConstantTexture::new(Color::new(0.812, 0.702, 0.525)));
 
-    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, violet));
-    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, tomato));
+    let dielectric = Dielectric::new(1.1);
+    let metal = Metal::new(Color::new(0.8, 0.85, 0.88), 0.01);
+    let light0 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 4.8));
+    let light1 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.91, 0.99) * 1.5));
+    let light2 = DiffuseLight::new(ConstantTexture::new(Color::new(0.88, 0.91, 0.99) * 1.3));
+    let light3 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.613, 0.604) * 3.2));
+    let light4 = DiffuseLight::new(ConstantTexture::new(Color::new(0.841, 0.813, 0.974) * 58.9));
+
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, color_e60307));
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, color_80cf00));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white));
     world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white));
 
-    let rect_light = FlipNormal::new(AARect::new(Plane::XZ, 100.0, 455.0, 20.0, 385.0, 554.0, light));
+    let rect_light0 = FlipNormal::new(AARect::new(Plane::XZ, 128.0, 428.0, 115.0, 270.0, 554.0, light0));
+    let rect_light1 = AARect::new(Plane::YZ, 20.0, 45.0, 25.0, 455.0, 1.0, light1);
+    let rect_light2 = FlipNormal::new(AARect::new(Plane::YZ, 20.0, 45.0, 25.0, 455.0, 554.0, light2));
+    let rect_light3 = FlipNormal::new(AARect::new(Plane::XY, 208.0, 348.0, 373.0, 449.0, 554.0, light3));
+    let rect_light4 = AARect::new(Plane::XY, 258.0, 298.0, 66.0, 90.0, 25.0, light4);
+    let mirror = AARect::new(Plane::YZ, 30.0, 535.0, 65.0, 490.0, 555.0, metal);
     let spehre0 = Sphere::new(Point3::new(488.0, 455.0, 368.0), 49.0, dielectric);
     let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
     let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);   
-    let obj = Mesh::load_obj("Venus.obj", Vec3::new(146.0, 10.0, 208.0), 0.2, turquoise).unwrap();
+    let obj = Mesh::load_obj("lart et la nature ou la.obj", Vec3::new(298.0, 185.0, 248.0), 7.0, color_cfb386).unwrap();
 
-    world.push(rect_light.clone());
-    world.push(spehre0);
-    world.push(Translate::new(Rotate::new(Axis::Y, cube0, 30.0), Vec3::new(278.0, 0.0, 156.0)));
-    world.push(tri0);  
+    world.push(rect_light0.clone());
+    //world.push(rect_light1.clone());
+    //world.push(rect_light2.clone());
+    world.push(rect_light3.clone());
+    //world.push(rect_light4.clone());
+    //world.push(mirror);
+    //world.push(spehre0);
+    //world.push(Translate::new(Rotate::new(Axis::Y, cube0, 30.0), Vec3::new(278.0, 0.0, 156.0)));
+    //world.push(tri0);  
     world.push(BVH::new(obj.tris.list, 0.0, 1.0));
 
-    lights.push(rect_light);
+    lights.push(rect_light0);
+    //lights.push(rect_light1);
+    //lights.push(rect_light2);
+    lights.push(rect_light3);
+    //lights.push(rect_light4);
 
     (Box::new(world), Box::new(lights))
 }
@@ -505,8 +559,8 @@ fn main() {
     const ASPECT_RATIO: f64 = 1.0;
     const IMAGE_WIDTH: u64 = 1000;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 1000;
-    const MAX_DEPTH: u64 = 50;
+    const SAMPLES_PER_PIXEL: u64 = 2000;
+    const MAX_DEPTH: u64 = 100;
 
     // world
     // let mut world = World::new();

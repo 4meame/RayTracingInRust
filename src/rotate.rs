@@ -4,6 +4,7 @@ use super::ray::Ray;
 use super::hit::{Hittable, HitRecord};
 use super::aabb::AABB;
 
+#[derive(Clone)]
 pub enum Axis {
     X,
     Y,
@@ -18,6 +19,7 @@ fn get_axis_index(axis: &Axis) -> (usize, usize, usize) {
     }
 }
 
+#[derive(Clone)]
 pub struct Rotate<H: Hittable> {
     axis: Axis,
     sin_theta: f64,

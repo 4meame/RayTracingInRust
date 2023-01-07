@@ -3,6 +3,7 @@ use super::ray::Ray;
 use super::hit::{Hittable, HitRecord};
 use super::aabb::AABB;
 
+#[derive(Clone)]
 pub struct Translate<H: Hittable> {
     hittable: H,
     offset: Vec3
