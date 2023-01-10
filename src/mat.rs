@@ -24,11 +24,45 @@ pub trait Material: Sync {
     fn emitted(&self, rec: &HitRecord) -> Color {
         Color::new(0.0, 0.0, 0.0)
     }
+
+    fn brdf(&self) -> f64 {
+        0.0
+    }
 }
 
 pub enum ScatterRecord<'a> {
     Specular { specular_ray: Ray, attenuation: Color },
-    Scatter { pdf: PDF<'a>, attenuation: Color }
+    Scatter { pdf: PDF<'a>, attenuation: Color },
+    Microfacet { pdf: PDF<'a>, attenuation: Color }
+}
+
+#[derive(Clone, Copy)]
+pub struct PBR<T: Texture> {
+    albedo: T
+}
+
+impl<T: Texture> PBR<T> {
+    pub fn new(albedo: T) -> PBR<T> {
+        PBR {
+            albedo
+        }
+    }
+}
+
+impl<T: Texture> Material for PBR<T> {
+    fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
+
+        let rec = ScatterRecord::Microfacet { 
+            pdf: PDF::brdf_pdf(rec.normal),
+            attenuation: self.albedo.mapping(rec.u, rec.v, &rec.position)
+        };
+
+        Some(rec)
+}
+
+    fn brdf(&self) -> f64 {
+        1.0
+    }
 }
 
 #[derive(Clone, Copy)]

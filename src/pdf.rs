@@ -17,12 +17,19 @@ fn random_cosine_direction() -> Vec3 {
 }
 
 pub enum PDF<'a> {
+    BRDF {},
     Cosine { uvw: ONB },
     Hittable { origin: Point3, hittable: &'a Box<dyn Hittable> },
     Mixture { p0: &'a PDF<'a>, p1: &'a PDF<'a> }
 }
 
 impl<'a> PDF<'a> {
+    pub fn brdf_pdf(w: Vec3)-> PDF<'a> {
+        PDF::BRDF {
+            
+        }
+    }
+
     pub fn cosine_pdf(w: Vec3) -> PDF<'a> {
         PDF::Cosine {
             uvw: ONB::build_from_w(&w)
@@ -39,6 +46,7 @@ impl<'a> PDF<'a> {
 
     pub fn value(&self, direction: Vec3) -> f64 {
         match self {
+            PDF::BRDF {  } => todo!(),
             PDF::Cosine { uvw } => {
                 let cosine = direction.normalized().dot(uvw.w());
                 if cosine > 0.0 {
@@ -59,6 +67,7 @@ impl<'a> PDF<'a> {
 
     pub fn generate(&self) -> Vec3 {
         match self {
+            PDF::BRDF {  } => todo!(),
             PDF::Cosine { uvw } => {
                 uvw.local(&random_cosine_direction())
             },
