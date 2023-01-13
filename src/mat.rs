@@ -5,6 +5,47 @@ use super::ray::Ray;
 use super::hit::{HitRecord};
 use super::texture::Texture;
 use super::pdf::PDF;
+use super::onb::ONB;
+
+fn schlick_fresnel(u: f64) -> f64 {
+    let m = (1.0 - u).clamp(0.0, 1.0);
+    let m2 = m.powi(2);
+    m2 * m2 * m
+}
+
+fn GTR_1(n_dot_h: f64, a: f64) -> f64 {
+    if a >= 1.0 {
+        return 1.0 / f64::consts::PI
+    } else {
+        let a2 = a * a;
+        let t = 1.0 + (a2 - 1.0) * n_dot_h * n_dot_h;
+        return (a2 - 1.0) / (f64::consts::PI * a2.log2() * t);
+    }
+}
+
+fn GTR_2(n_dot_h: f64, a: f64) -> f64 {
+    let a2 = a * a;
+    let t = 1.0 + (a2 - 1.0) * n_dot_h * n_dot_h;
+    return a2 / (f64::consts::PI * t * t);
+}
+
+fn GTR_2_aniso(n_dot_h: f64, h_dot_x: f64, h_dot_y: f64, ax: f64, ay: f64) -> f64 {
+    return 1.0 / (f64::consts::PI * ax * ay * f64::powi((h_dot_x / ax).powi(2) + (h_dot_y / ay).powi(2) + n_dot_h * n_dot_h, 2));
+}
+
+fn smithG_GGX(n_dot_v: f64, alphaG: f64) -> f64 {
+    let a = alphaG * alphaG;
+    let b = n_dot_v * n_dot_v;
+    return 1.0 / (n_dot_v + f64::sqrt(a + b - a * b));
+}
+
+fn smithG_GGX_aniso(n_dot_v: f64, v_dot_x: f64, v_dot_y: f64, ax: f64, ay: f64) -> f64 {
+    return 1.0 / (n_dot_v + f64::sqrt((v_dot_x * ax).powi(2) + (v_dot_y * ay).powi(2) + n_dot_v.powi(2)));
+}
+
+fn mon_to_lin(x: Vec3) -> Vec3 {
+    return Vec3::new(x.x().powf(2.2), x.y().powf(2.2), x.z().powf(2.2));
+}
 
 pub trait Material: Sync {
     // old method
@@ -25,43 +66,87 @@ pub trait Material: Sync {
         Color::new(0.0, 0.0, 0.0)
     }
 
-    fn brdf(&self) -> f64 {
-        0.0
+    //choose disney principled brdf
+    fn brdf(&self, r_in: &Ray, r_out: &Ray, rec: &HitRecord) -> Vec3 {
+        Vec3::new(0.0, 0.0, 0.0)
     }
 }
 
 pub enum ScatterRecord<'a> {
     Specular { specular_ray: Ray, attenuation: Color },
     Scatter { pdf: PDF<'a>, attenuation: Color },
-    Microfacet { pdf: PDF<'a>, attenuation: Color }
+    Microfacet { pdf: PDF<'a> }
 }
 
 #[derive(Clone, Copy)]
 pub struct PBR<T: Texture> {
-    albedo: T
+    base_color: T,
+    matallic: f64,
+    subsurface: f64,
+    specular: f64,
+    roughness: f64,
+    specular_tint: f64,
+    anisotropic: f64,
+    sheen: f64,
+    sheen_tint: f64,
+    clearcoat: f64,
+    clearcoat_gloss: f64
 }
 
 impl<T: Texture> PBR<T> {
-    pub fn new(albedo: T) -> PBR<T> {
+    pub fn new(base_color: T, matallic: f64, subsurface: f64, specular: f64, roughness: f64, specular_tint: f64, anisotropic: f64, sheen: f64, sheen_tint: f64, clearcoat: f64, clearcoat_gloss: f64) -> PBR<T> {
         PBR {
-            albedo
+            base_color,
+            roughness,
+            matallic,
+            subsurface,
+            specular,
+            specular_tint,
+            anisotropic,
+            sheen,
+            sheen_tint,
+            clearcoat,
+            clearcoat_gloss,
         }
     }
 }
 
 impl<T: Texture> Material for PBR<T> {
-    fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
+    fn scatter_mc_method(&self, _r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
 
         let rec = ScatterRecord::Microfacet { 
-            pdf: PDF::brdf_pdf(rec.normal),
-            attenuation: self.albedo.mapping(rec.u, rec.v, &rec.position)
+            pdf: PDF::brdf_pdf(rec.normal)
         };
 
         Some(rec)
-}
+    }
 
-    fn brdf(&self) -> f64 {
-        1.0
+    fn brdf(&self, r_in: &Ray, r_out: &Ray, rec: &HitRecord) -> Vec3 {
+            //inverse direction
+            let l= r_in.direction() * (-1.0);
+            let v = r_out.direction();
+            let onb = ONB::build_from_w(&rec.normal);
+            let n = onb.w();
+            let x = onb.u();
+            let y = onb.v();
+        
+            let n_dot_v = n.dot(v);
+            let n_dot_l = n.dot(l);
+            if n_dot_l < 0.0 || n_dot_v < 0.0 {
+                return Vec3::new(0.0, 0.0, 0.0);
+            }
+
+            let h = (l + v).normalized();
+            let n_dot_h = n.dot(h);
+            let l_dot_h = l.dot(h);
+
+            let cd_lin = mon_to_lin(self.base_color.mapping(rec.u, rec.v, &rec.position));
+            //luminance approx
+            let cd_lum = 0.3 * cd_lin.x() + 0.6 * cd_lin.y() + 0.1 * cd_lin.z();
+
+            
+
+            Vec3::new(0.0, 0.0, 0.0)
     }
 }
 

@@ -96,6 +96,7 @@ fn ray_color(ray: &Ray, background: Color, world: &Box<dyn Hittable>, lights: &B
                     let pdf_value = mixture_pdf.value(scattered.direction());
                     return emitted + attenuation *  rec.material.scattering_pdf(ray, &rec, &scattered) * ray_color(&scattered, background, world, lights, depth - 1) / pdf_value
                 }
+                ScatterRecord::Microfacet { pdf } => todo!(),
            }
 
         } else {
@@ -385,16 +386,16 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let color_80cf00 = Lambertian::new(ConstantTexture::new(Color::new(0.502, 0.812, 0.002)));
     let color_cfb386 = Lambertian::new(ConstantTexture::new(Color::new(0.812, 0.702, 0.525)));
 
-    let dielectric = Dielectric::new(1.1);
+    let dielectric = Dielectric::new(1.333);
     let metal = Metal::new(Color::new(0.8, 0.85, 0.88), 0.01);
-    let light0 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 4.8));
+    let light0 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 2.2));
     let light1 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.91, 0.99) * 1.5));
     let light2 = DiffuseLight::new(ConstantTexture::new(Color::new(0.88, 0.91, 0.99) * 1.3));
-    let light3 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.613, 0.604) * 25.2));
+    let light3 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.613, 0.604) * 39.2));
     let light4 = DiffuseLight::new(ConstantTexture::new(Color::new(0.841, 0.813, 0.974) * 58.9));
 
-    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, perano));
-    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, diamond));
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 555.0, desire));
+    world.push(AARect::new(Plane::YZ, 0.0, 555.0, 0.0, 555.0, 0.0, safety_orange));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 0.0, white));
     world.push(AARect::new(Plane::XZ, 0.0, 555.0, 0.0, 555.0, 555.0, white));
     world.push(AARect::new(Plane::XY, 0.0, 555.0, 0.0, 555.0, 555.0, white));
@@ -402,18 +403,18 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let rect_light0 = FlipNormal::new(AARect::new(Plane::XZ, 128.0, 428.0, 115.0, 270.0, 554.0, light0));
     let rect_light1 = AARect::new(Plane::YZ, 20.0, 45.0, 25.0, 455.0, 1.0, light1);
     let rect_light2 = FlipNormal::new(AARect::new(Plane::YZ, 20.0, 45.0, 25.0, 455.0, 554.0, light2));
-    let rect_light3 = FlipNormal::new(AARect::new(Plane::XY, 208.0, 348.0, 373.0, 449.0, 554.0, light3));
+    let rect_light3 = FlipNormal::new(AARect::new(Plane::XY, 158.0, 298.0, 373.0, 449.0, 554.0, light3));
     let rect_light4 = AARect::new(Plane::XY, 258.0, 298.0, 66.0, 90.0, 25.0, light4);
     let mirror = AARect::new(Plane::YZ, 30.0, 535.0, 65.0, 490.0, 555.0, metal);
     let spehre0 = Sphere::new(Point3::new(488.0, 455.0, 368.0), 49.0, dielectric);
     let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
     let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);   
-    let obj = Mesh::load_obj("baccante.obj", Vec3::new(278.0, 40.0, 258.0), 15.0, apricot_peach).unwrap();
+    let obj = Mesh::load_obj("Venus.obj", Vec3::new(278.0, 3.0, 258.0), 0.2, bone).unwrap();
 
-    //world.push(rect_light0.clone());
+    world.push(rect_light0.clone());
     //world.push(rect_light1.clone());
     //world.push(rect_light2.clone());
-    world.push(rect_light3.clone());
+    //world.push(rect_light3.clone());
     //world.push(rect_light4.clone());
     //world.push(mirror);
     //world.push(spehre0);
@@ -421,10 +422,10 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     //world.push(tri0);  
     world.push(BVH::new(obj.tris.list, 0.0, 1.0));
 
-    //lights.push(rect_light0);
+    lights.push(rect_light0);
     //lights.push(rect_light1);
     //lights.push(rect_light2);
-    lights.push(rect_light3);
+    //lights.push(rect_light3);
     //lights.push(rect_light4);
 
     (Box::new(world), Box::new(lights))
@@ -559,7 +560,7 @@ fn main() {
     const ASPECT_RATIO: f64 = 1.0;
     const IMAGE_WIDTH: u64 = 1000;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 2000;
+    const SAMPLES_PER_PIXEL: u64 = 1500;
     const MAX_DEPTH: u64 = 100;
 
     // world
@@ -705,12 +706,12 @@ fn main() {
             
             let backgournd = Color::new(0.0, 0.0, 0.0);
 
-            let lookfrom = Point3::new(278.0, 278.0, -800.0);
-            let lookat = Point3::new(278.0, 278.0, 0.0);
+            let lookfrom = Point3::new(199.0, 439.0, -200.0);
+            let lookat = Point3::new(278.0, 375.0, 258.0);
             let vup = Vec3::new(0.0, 1.0, 0.0);
             let dist_to_focus = 10.0;
             let aperture = 0.01;
-            let camera = Camera::new(lookfrom, lookat, vup, 40.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
+            let camera = Camera::new(lookfrom, lookat, vup, 30.0, ASPECT_RATIO, aperture, dist_to_focus, 0.0, 1.0);
 
             (world, backgournd, lights, camera)
         }
