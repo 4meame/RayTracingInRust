@@ -16,6 +16,8 @@ fn random_cosine_direction() -> Vec3 {
     Vec3::new(x, y, z)
 }
 
+
+
 pub enum PDF<'a> {
     BRDF { uvw: ONB },
     Cosine { uvw: ONB },
@@ -46,7 +48,20 @@ impl<'a> PDF<'a> {
 
     pub fn value(&self, direction: Vec3) -> f64 {
         match self {
-            PDF::BRDF { uvw } => todo!(),
+            PDF::BRDF { uvw } => {
+                let cosine = direction.normalized().dot(uvw.w());
+                if cosine <= 0.0 {
+                    return 0.0;
+                }
+                // diffuse
+                let diffuse_pdf = cosine / f64::consts::PI;
+
+
+
+                
+
+                0.0
+            },
             PDF::Cosine { uvw } => {
                 let cosine = direction.normalized().dot(uvw.w());
                 if cosine > 0.0 {
@@ -67,7 +82,9 @@ impl<'a> PDF<'a> {
 
     pub fn generate(&self) -> Vec3 {
         match self {
-            PDF::BRDF { uvw } => todo!(),
+            PDF::BRDF { uvw } => {
+                uvw.local(&random_cosine_direction())
+            },
             PDF::Cosine { uvw } => {
                 uvw.local(&random_cosine_direction())
             },

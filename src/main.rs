@@ -32,7 +32,7 @@ use cube::Cube;
 use tri::Triangle;
 use mesh::Mesh;
 use camera::Camera;
-use mat::{Lambertian, Metal, Dielectric, DiffuseLight, ScatterRecord};
+use mat::{Lambertian, Metal, Dielectric, DiffuseLight, ScatterRecord, PBR};
 use bvh::BVH;
 use texture::{ConstantTexture, CheckTexture, NoiseTexture, ImageTexture};
 use medium::ConstantMedium;
@@ -96,7 +96,13 @@ fn ray_color(ray: &Ray, background: Color, world: &Box<dyn Hittable>, lights: &B
                     let pdf_value = mixture_pdf.value(scattered.direction());
                     return emitted + attenuation *  rec.material.scattering_pdf(ray, &rec, &scattered) * ray_color(&scattered, background, world, lights, depth - 1) / pdf_value
                 }
-                ScatterRecord::Microfacet { pdf } => todo!(),
+                ScatterRecord::Microfacet { pdf } => {
+                    let hittable_pdf = PDF::hittable_pdf(rec.position, lights);
+                    let mixture_pdf = PDF::mixture_pdf(&hittable_pdf, &pdf);
+                    let scattered = Ray::new(rec.position, mixture_pdf.generate(), ray.time());
+                    let pdf_value = mixture_pdf.value(scattered.direction());
+                    return emitted + rec.material.brdf(ray, &scattered, &rec) * ray_color(&scattered, background, world, lights, depth - 1) / pdf_value
+                }
            }
 
         } else {
@@ -388,6 +394,19 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
 
     let dielectric = Dielectric::new(1.333);
     let metal = Metal::new(Color::new(0.8, 0.85, 0.88), 0.01);
+
+    let pbr = PBR::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), 
+                                            0.0, 
+                                            0.5, 
+                                            0.8, 
+                                            0.05, 
+                                            0.5, 
+                                            0.0, 
+                                            0.07, 
+                                            0.1, 
+                                            0.9, 
+                                            0.7);
+
     let light0 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 2.2));
     let light1 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.91, 0.99) * 1.5));
     let light2 = DiffuseLight::new(ConstantTexture::new(Color::new(0.88, 0.91, 0.99) * 1.3));
@@ -409,7 +428,7 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let spehre0 = Sphere::new(Point3::new(488.0, 455.0, 368.0), 49.0, dielectric);
     let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
     let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);   
-    let obj = Mesh::load_obj("Venus.obj", Vec3::new(278.0, 3.0, 258.0), 0.2, bone).unwrap();
+    let obj = Mesh::load_obj("Venus.obj", Vec3::new(278.0, 3.0, 258.0), 0.2, pbr).unwrap();
 
     world.push(rect_light0.clone());
     //world.push(rect_light1.clone());
@@ -558,9 +577,9 @@ enum Scene {
 fn main() {
     // image
     const ASPECT_RATIO: f64 = 1.0;
-    const IMAGE_WIDTH: u64 = 1000;
+    const IMAGE_WIDTH: u64 = 500;
     const IMAGE_HEIGHT: u64 = ((IMAGE_WIDTH as f64) / ASPECT_RATIO) as u64;
-    const SAMPLES_PER_PIXEL: u64 = 1500;
+    const SAMPLES_PER_PIXEL: u64 = 800;
     const MAX_DEPTH: u64 = 100;
 
     // world

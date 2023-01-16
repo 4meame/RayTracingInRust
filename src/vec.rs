@@ -57,6 +57,16 @@ impl Vec3 {
         self / self.length()
     }
 
+    pub fn mix(self, other: Vec3, t: f64) -> Vec3 {
+        Vec3 {
+            e: [
+                self[0] * (1.0 - t) + other[0] * t,
+                self[1] * (1.0 - t) + other[1] * t,
+                self[2] * (1.0 - t) + other[2] * t
+            ]
+        }
+    }
+
     pub fn random(rand: Range<f64>) -> Vec3 {
         let mut rng = rand::thread_rng();
 

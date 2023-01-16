@@ -10,7 +10,7 @@ use super::onb::ONB;
 fn schlick_fresnel(u: f64) -> f64 {
     let m = (1.0 - u).clamp(0.0, 1.0);
     let m2 = m.powi(2);
-    m2 * m2 * m
+    return m2 * m2 * m
 }
 
 fn GTR_1(n_dot_h: f64, a: f64) -> f64 {
@@ -47,6 +47,10 @@ fn mon_to_lin(x: Vec3) -> Vec3 {
     return Vec3::new(x.x().powf(2.2), x.y().powf(2.2), x.z().powf(2.2));
 }
 
+fn mix(a: f64, b: f64, t: f64) -> f64 {
+    return a * (1.0 - t) + b * t;
+}
+
 pub trait Material: Sync {
     // old method
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
@@ -81,7 +85,7 @@ pub enum ScatterRecord<'a> {
 #[derive(Clone, Copy)]
 pub struct PBR<T: Texture> {
     base_color: T,
-    matallic: f64,
+    metallic: f64,
     subsurface: f64,
     specular: f64,
     roughness: f64,
@@ -94,11 +98,11 @@ pub struct PBR<T: Texture> {
 }
 
 impl<T: Texture> PBR<T> {
-    pub fn new(base_color: T, matallic: f64, subsurface: f64, specular: f64, roughness: f64, specular_tint: f64, anisotropic: f64, sheen: f64, sheen_tint: f64, clearcoat: f64, clearcoat_gloss: f64) -> PBR<T> {
+    pub fn new(base_color: T, metallic: f64, subsurface: f64, specular: f64, roughness: f64, specular_tint: f64, anisotropic: f64, sheen: f64, sheen_tint: f64, clearcoat: f64, clearcoat_gloss: f64) -> PBR<T> {
         PBR {
             base_color,
             roughness,
-            matallic,
+            metallic,
             subsurface,
             specular,
             specular_tint,
@@ -122,32 +126,68 @@ impl<T: Texture> Material for PBR<T> {
     }
 
     fn brdf(&self, r_in: &Ray, r_out: &Ray, rec: &HitRecord) -> Vec3 {
-            //inverse direction
-            let l= r_in.direction() * (-1.0);
-            let v = r_out.direction();
-            let onb = ONB::build_from_w(&rec.normal);
-            let n = onb.w();
-            let x = onb.u();
-            let y = onb.v();
-        
-            let n_dot_v = n.dot(v);
-            let n_dot_l = n.dot(l);
-            if n_dot_l < 0.0 || n_dot_v < 0.0 {
-                return Vec3::new(0.0, 0.0, 0.0);
-            }
+        //inverse direction
+        let l= r_in.direction().normalized() * (-1.0);
+        let v = r_out.direction().normalized();
+        let onb = ONB::build_from_w(&rec.normal);
+        let n = onb.w();
+        let x = onb.u();
+        let y = onb.v();
+    
+        let n_dot_v = n.dot(v);
+        let n_dot_l = n.dot(l);
+        if n_dot_l < 0.0 || n_dot_v < 0.0 {
+            return Vec3::new(0.0, 0.0, 0.0);
+        }
 
-            let h = (l + v).normalized();
-            let n_dot_h = n.dot(h);
-            let l_dot_h = l.dot(h);
+        let h = (l + v).normalized();
+        let n_dot_h = n.dot(h);
+        let l_dot_h = l.dot(h);
 
-            let cd_lin = mon_to_lin(self.base_color.mapping(rec.u, rec.v, &rec.position));
-            //luminance approx
-            let cd_lum = 0.3 * cd_lin.x() + 0.6 * cd_lin.y() + 0.1 * cd_lin.z();
+        let cd_lin = mon_to_lin(self.base_color.mapping(rec.u, rec.v, &rec.position));
+        //luminance approx
+        let cd_lum = 0.3 * cd_lin.x() + 0.6 * cd_lin.y() + 0.1 * cd_lin.z();
 
-            
+        let c_tint = if cd_lum > 0.0 { cd_lin / cd_lum } else { Vec3::new(1.0, 1.0, 1.0) };
+        let c_spec0 = (Vec3::new(1.0, 1.0, 1.0).mix(c_tint, self.specular_tint) * 0.08 * self.specular).mix(cd_lin, self.metallic);
+        let c_sheen = Vec3::new(1.0, 1.0, 1.0).mix(c_tint, self.sheen_tint);
 
-            Vec3::new(0.0, 0.0, 0.0)
+        // Diffuse fresnel - go from 1 at normal incidence to .5 at grazing
+        // and mix in diffuse retro-reflection based on roughness
+        let fresnel_l = schlick_fresnel(n_dot_l);
+        let fresnel_v = schlick_fresnel(n_dot_v);
+        let fresnel_diffuse_90 = 0.5 + 2.0 * l_dot_h * l_dot_h * self.roughness;
+        let fresnel_diffuse = mix(1.0, fresnel_diffuse_90, fresnel_l) * mix(1.0, fresnel_diffuse_90, fresnel_v);
+
+        // Based on Hanrahan-Krueger brdf approximation of isotropic bssrdf
+        // 1.25 scale is used to (roughly) preserve albedo
+        // Fss90 used to "flatten" retroreflection based on roughness
+        let fresnel_subface_scatter_90 = l_dot_h * l_dot_h * self.roughness;
+        let fresnel_subface_scatter = mix(1.0, fresnel_subface_scatter_90, fresnel_l) * mix(1.0, fresnel_subface_scatter_90, fresnel_v);
+        let subface_scatter = 1.25 * (fresnel_subface_scatter * (1.0 / (n_dot_l + n_dot_v) - 0.5) + 0.5);
+
+        // specular
+        let aspect = (1.0 - self.anisotropic * 0.9).sqrt();
+        let ax = (self.roughness.powi(2) / aspect).max(0.001);
+        let ay = (self.roughness.powi(2) * aspect).max(0.001);
+        let d_specular = GTR_2_aniso(n_dot_h, h.dot(x), h.dot(y), ax, ay);
+        let fresnel_h = schlick_fresnel(l_dot_h);
+        let f_specular = c_spec0.mix(Vec3::new(1.0, 1.0, 1.0), fresnel_h);
+        let g_specular = smithG_GGX_aniso(n_dot_l, l.dot(x), l.dot(y), ax, ay) * smithG_GGX_aniso(n_dot_v, v.dot(x), v.dot(y), ax, ay);
+
+        // sheen
+        let fresnel_sheen = fresnel_h * self.sheen * c_sheen;
+
+        // clearcoat (ior = 1.5 -> F0 = 0.04)
+        let d_reflect = GTR_1(n_dot_h, mix(0.1, 0.001, self.clearcoat_gloss));
+        let f_reflect = mix(0.04, 1.0, fresnel_h);
+        let g_reflect = smithG_GGX(n_dot_l, 0.25) * smithG_GGX(n_dot_v, 0.25);
+
+        return ((1.0 / f64::consts::PI) * mix(fresnel_diffuse, subface_scatter, self.subsurface) * cd_lin + fresnel_sheen)
+                * (1.0 - self.metallic)
+                + g_specular * f_specular * d_specular + Vec3::new(0.25, 0.25, 0.25) * self.clearcoat * g_reflect * f_reflect * d_reflect;
     }
+    
 }
 
 #[derive(Clone, Copy)]
