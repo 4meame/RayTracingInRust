@@ -397,15 +397,15 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
 
     let pbr = PBR::new(ConstantTexture::new(Color::new(1.0, 1.0, 1.0)), 
                                             0.0, 
-                                            0.5, 
-                                            0.8, 
-                                            0.05, 
-                                            0.5, 
                                             0.0, 
-                                            0.07, 
-                                            0.1, 
-                                            0.9, 
-                                            0.7);
+                                            0.0, 
+                                            1.0, 
+                                            0.0, 
+                                            0.0, 
+                                            0.0, 
+                                            0.0, 
+                                            0.0, 
+                                            0.0);
 
     let light0 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 1.0, 0.88) * 2.2));
     let light1 = DiffuseLight::new(ConstantTexture::new(Color::new(1.0, 0.91, 0.99) * 1.5));
@@ -428,7 +428,7 @@ fn cornell_test() -> (Box<dyn Hittable>, Box<dyn Hittable>) {
     let spehre0 = Sphere::new(Point3::new(488.0, 455.0, 368.0), 49.0, dielectric);
     let cube0 = Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(175.0, 175.0, 175.0), white);
     let tri0 = Triangle::new([Vec3::new(0.0, 0.0, 465.0), Vec3::new(555.0, 0.0, 465.0), Vec3::new(278.0, 455.0, 555.0)], metal);   
-    let obj = Mesh::load_obj("Venus.obj", Vec3::new(278.0, 3.0, 258.0), 0.2, pbr).unwrap();
+    let obj = Mesh::load_obj("Venus.obj", Vec3::new(278.0, 3.0, 258.0), 0.2, color_80cf00).unwrap();
 
     world.push(rect_light0.clone());
     //world.push(rect_light1.clone());

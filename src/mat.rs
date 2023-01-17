@@ -7,13 +7,13 @@ use super::texture::Texture;
 use super::pdf::PDF;
 use super::onb::ONB;
 
-fn schlick_fresnel(u: f64) -> f64 {
+pub fn schlick_fresnel(u: f64) -> f64 {
     let m = (1.0 - u).clamp(0.0, 1.0);
     let m2 = m.powi(2);
     return m2 * m2 * m
 }
 
-fn GTR_1(n_dot_h: f64, a: f64) -> f64 {
+pub fn GTR_1(n_dot_h: f64, a: f64) -> f64 {
     if a >= 1.0 {
         return 1.0 / f64::consts::PI
     } else {
@@ -23,31 +23,31 @@ fn GTR_1(n_dot_h: f64, a: f64) -> f64 {
     }
 }
 
-fn GTR_2(n_dot_h: f64, a: f64) -> f64 {
+pub fn GTR_2(n_dot_h: f64, a: f64) -> f64 {
     let a2 = a * a;
     let t = 1.0 + (a2 - 1.0) * n_dot_h * n_dot_h;
     return a2 / (f64::consts::PI * t * t);
 }
 
-fn GTR_2_aniso(n_dot_h: f64, h_dot_x: f64, h_dot_y: f64, ax: f64, ay: f64) -> f64 {
+pub fn GTR_2_aniso(n_dot_h: f64, h_dot_x: f64, h_dot_y: f64, ax: f64, ay: f64) -> f64 {
     return 1.0 / (f64::consts::PI * ax * ay * f64::powi((h_dot_x / ax).powi(2) + (h_dot_y / ay).powi(2) + n_dot_h * n_dot_h, 2));
 }
 
-fn smithG_GGX(n_dot_v: f64, alphaG: f64) -> f64 {
+pub fn smithG_GGX(n_dot_v: f64, alphaG: f64) -> f64 {
     let a = alphaG * alphaG;
     let b = n_dot_v * n_dot_v;
     return 1.0 / (n_dot_v + f64::sqrt(a + b - a * b));
 }
 
-fn smithG_GGX_aniso(n_dot_v: f64, v_dot_x: f64, v_dot_y: f64, ax: f64, ay: f64) -> f64 {
+pub fn smithG_GGX_aniso(n_dot_v: f64, v_dot_x: f64, v_dot_y: f64, ax: f64, ay: f64) -> f64 {
     return 1.0 / (n_dot_v + f64::sqrt((v_dot_x * ax).powi(2) + (v_dot_y * ay).powi(2) + n_dot_v.powi(2)));
 }
 
-fn mon_to_lin(x: Vec3) -> Vec3 {
+pub fn mon_to_lin(x: Vec3) -> Vec3 {
     return Vec3::new(x.x().powf(2.2), x.y().powf(2.2), x.z().powf(2.2));
 }
 
-fn mix(a: f64, b: f64, t: f64) -> f64 {
+pub fn mix(a: f64, b: f64, t: f64) -> f64 {
     return a * (1.0 - t) + b * t;
 }
 
@@ -116,10 +116,16 @@ impl<T: Texture> PBR<T> {
 }
 
 impl<T: Texture> Material for PBR<T> {
-    fn scatter_mc_method(&self, _r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
+    fn scatter_mc_method(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
 
         let rec = ScatterRecord::Microfacet { 
-            pdf: PDF::brdf_pdf(rec.normal)
+            pdf: PDF::brdf_pdf(rec.normal,
+                            r_in.direction(),
+                            self.roughness, 
+                            self.anisotropic,
+                            self.clearcoat,
+                            self.clearcoat_gloss
+                            )
         };
 
         Some(rec)
