@@ -1,6 +1,7 @@
 # RayTracingInRust
 Follow https://raytracing.github.io/books/RayTracingInOneWeekend.html Ray Tracing Tutorial  
 Implemented by Rust.
+Type"cargo run --release >image.ppm" to generate picture
 
 ![Image text](img/image.jpg)  
 ![Image text](img/CornellBox.png)  
